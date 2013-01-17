@@ -2373,7 +2373,7 @@ __check_missing_programs () {
 		# Check if SoX is found/installed
 		sox_exists="$(command -v sox)"
 
-		if [[ -n "${sox_exists}" ]] ; then
+		if [[ -z "${sox_exists}" ]] ; then
 			# SoX can't be found, exit
 			{ __error "It appears SoX is not installed. Please verify you" ; __newline ;} >&2
 			{ __error "have this program installed and can be found in \$PATH" ; __newline ;} >&2
