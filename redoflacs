@@ -2366,7 +2366,12 @@ __check_missing_programs () {
 		exit 1
 	else
 		# Set up auCDtect command
-		export aucdtect_command="${aucdtect_exists}"
+		#
+		# Change all forward slashes to backslashes for Windows compatibility
+		aucdtect_command="${aucdtect_exists//\//\\}"
+		# Add Windows command (cmd) to run silently and terminate after
+		# completion
+		export aucdtect_command="cmd /C c:\\cygwin"${aucdtect_command}""
 	fi
 
 	# If "-A, --aucdtect-spectrogram" was called
@@ -3099,6 +3104,11 @@ __operation_aucdtect () {
 			# The WAV file to be created from current FLAC file
 			decoded_wav="${i%${flac_extension}}_redoflacs_"$$".wav"
 
+			# Save ${decoded_wav} to a copy variable, which we'll use to
+			# delete the file after processing, as ${decoded_wav} will be
+			# changed below
+			decoded_wav_orig="${decoded_wav}"
+
 			# Decompress FLAC to WAV so auCDtect can read the audio file
 			flac --totally-silent -d "${i}" -o "${decoded_wav}"
 
@@ -3117,13 +3127,73 @@ __operation_aucdtect () {
 				__fail_count
 
 			else
-				# 'export MALLOC_CHECK_' allows the dynamic linked version of auCDtect
-				# to run without throwing errors
-				export MALLOC_CHECK_="0"
+				# If the first character of ${decoded_wav} is a forward slash (/)
+				# then the pathname is absolute, so do nothing.  If the first
+				# character is _NOT_ a forward slash, prepend ${PWD} to it to
+				# make it absolute (required for Windows -- will be converted)
+				#
+				# Replace entire ${decoded_wav} with just a forward slash (only
+				# if string starts with a forward slash (/)
+				check_forward_slash="${decoded_wav/#\/*//}"
+
+				if [[ "${check_forward_slash}" != "/" ]] ; then
+					# ${decoded_wav} is relative, so prepend ${PWD}
+					decoded_wav="${PWD}/${decoded_wav}"
+				else
+					# ${decoded_wav} is absolute, check if pathname is local
+					# to Cygwin or in the Window environment (eg. 'c:\')
+					test_pathname="${decoded_wav/\/?\/*}"
+					test_pathname="${test_pathname#/}"
+
+					if [[ "${test_pathname}" == "cygdrive" ]] ; then
+						# Pathname is _NOT_ local to Cygwin, obtain
+						# drive letter used when calling script (may
+						# be different than 'c:')
+						#
+						# Strip '/cygdrive/' from ${decoded_wav}
+						drive_letter="${decoded_wav#/*/}"
+
+						# String everything but first character (drive letter)
+						drive_letter="${drive_letter%%/*}"
+					fi
+				fi
+
+				# Change forward slashes in ${decoded_wav} to backslashes to
+				# be compatible with Windows
+				decoded_wav="${decoded_wav//\//\\}"
+
+				# Prepend drive letter to ${decoded_wav} so Windows can find
+				# the files
+				#
+				# If ${drive_letter} is null, we can assume the drive letter
+				# is 'c:' since the path was relative, implying local storage,
+				# else use the obtained drive letter (in case the FLAC files
+				# are located on different medium)
+				if [[ -z "${drive_letter}" && "${test_pathname}" == "cygdrive" ]] ; then
+					# ${drive_letter} is null, prepend 'c:' since the
+					# original pathname was _NOT_ local to Cygwin
+					decoded_wav="c:"${decoded_wav}""
+				elif [[ -z "${drive_letter}" && "${test_pathname}" != "cygdrive" ]] ; then
+					# ${drive_letter} is null and original pathname _IS_
+					# local to Cygwin so prepend 'c:\cygwin\' to allow Windows
+					# to find files
+					decoded_wav="c:\\cygwin"${decoded_wav}""
+				elif [[ -n "${drive_letter}" && "${test_pathname}" == "cygdrive" ]] ; then
+					# ${drive_letter} is not null, and the user
+					# specified a FLAC location in Windows subsystem, so
+					# we need to remove '\cygdrive\${drive_letter}'
+					decoded_wav="${decoded_wav#\\cygdrive\\?}"
+
+					# Prepend '${drive_letter}:'
+					decoded_wav="${drive_letter}:"${decoded_wav}""
+				else
+					# ${drive_letter} not null, prepend '${drive_letter}:'
+					decoded_wav="${drive_letter}:"${decoded_wav}""
+				fi
 
 				# The actual auCDtect command with highest accuracy setting
 				# 2> hides the displayed progress to /dev/null disabling the progress percentage
-				aucdtect_output="$("${aucdtect_command}" -m0 "${decoded_wav}" 2>/dev/null)"
+				aucdtect_output=( "$(${aucdtect_command} -m40 "${decoded_wav}" 2>/dev/null)" )
 
 				# Exit code 130 is SIGINT so only check for exit code '1'
 				# If auCDtect failed to 
@@ -3150,8 +3220,8 @@ __operation_aucdtect () {
 					#  array:  Store captured output into 'aucdtect_check_array'
 					mapfile -s7 -n1 -t aucdtect_check_array <<< "${aucdtect_output}"
 
-					# Remove the last line (blank line) from ${aucdtect_check_array[@]}
-					aucdtect_check_array=( "${aucdtect_check_array[@]%$'\n'}" )
+					# Remove the carriage return from ${aucdtect_check_array[@]}
+					aucdtect_check_array=( "${aucdtect_check_array[@]%$'\r'}" )
 
 					# There is an issue with the processed FLAC file
 					if [[ "${aucdtect_check_array[0]}" != "This track looks like CDDA with probability 100%" ]] ; then
@@ -3180,17 +3250,29 @@ __operation_aucdtect () {
 							# and output progress
 							__print_aucdtect_spectrogram
 
+							# Escape any braces in ${i} to prevent SoX from interpreting
+							# them as a range
+							#
+							# Create copy of ${i} to reset upon changing it
+							i_orig="${i}"
+
+							# Escapes left brace
+							i="${i//{/\{}"
+
+							# Escapes right brace
+							i="${i//\}/\}}"
+
 							# SoX command to create the spectrogram and place it in spectrogram_picture
-							"${sox_command}" "${i}" -n spectrogram -c '' -t "${i}" -p1 -z90 -Z0 -q249 -wHann -x1800 -y513 -o "${spectrogram_picture}"
+							"${sox_command}" "${i}" -n spectrogram -c '' -t "${i_orig}" -p1 -z90 -Z0 -q249 -wHann -x1800 -y513 -o "${spectrogram_picture}"
 
 							# Use the below version of the command to create hi-res spectrograms
-							#"${sox_command}" "${i}" -n spectrogram -c '' -t "${i}" -p1 -z90 -Z0 -q249 -wHann -x5000 -y1025 -o "${spectrogram_picture}"
+							#"${sox_command}" "${i}" -n spectrogram -c '' -t "${i_orig}" -p1 -z90 -Z0 -q249 -wHann -x5000 -y1025 -o "${spectrogram_picture}"
 
 							# Print ISSUE and log error, and show where to find
 							# the created spectrogram of the processed FLAC file
 							__print_aucdtect_issue
 							printf "%s\n%s\n%s\n%s\n" \
-								   "FLAC:        ${i}" \
+								   "FLAC:        ${i_orig}" \
 								   "ERROR:       ${aucdtect_check_array[0]}" \
 								   "SPECTROGRAM: ${spectrogram_picture}" \
 								   "------------------------------------------------------------------" \
@@ -3214,7 +3296,7 @@ __operation_aucdtect () {
 					fi
 
 					# Remove temporary WAV file
-					rm "${decoded_wav}"
+					rm "${decoded_wav_orig}"
 				fi
 			fi
 		fi
