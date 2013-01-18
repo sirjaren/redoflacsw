@@ -3137,8 +3137,19 @@ __operation_aucdtect () {
 				check_forward_slash="${decoded_wav/#\/*//}"
 
 				if [[ "${check_forward_slash}" != "/" ]] ; then
-					# ${decoded_wav} is relative, so prepend ${PWD}
-					decoded_wav="${PWD}/${decoded_wav}"
+					# ${decoded_wav is not absolute, so check if the
+					# user specified a drive letter, for example:
+					#  'C:/cygwin/path/to/flac/directory'
+					check_drive_letter="${decoded_wav%%/*}"
+
+					if [[ "${check_drive_letter}" == ?: ]] ; then
+						# Drive letter was found so convert ${decoded_wav}
+						# to correct format (eg. removing: C:/cygwin)
+						decoded_wav="${decoded_wav#?:\/cygwin}"
+					else
+						# ${decoded_wav} is relative, so prepend ${PWD}
+						decoded_wav="${PWD}/${decoded_wav}"
+					fi
 				else
 					# ${decoded_wav} is absolute, check if pathname is local
 					# to Cygwin or in the Window environment (eg. 'c:\')
