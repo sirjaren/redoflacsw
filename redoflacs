@@ -3193,7 +3193,7 @@ __operation_aucdtect () {
 
 				# The actual auCDtect command with highest accuracy setting
 				# 2> hides the displayed progress to /dev/null disabling the progress percentage
-				aucdtect_output=( "$(${aucdtect_command} -m40 "${decoded_wav}" 2>/dev/null)" )
+				aucdtect_output=( "$(${aucdtect_command} -m0 "${decoded_wav}" 2>/dev/null)" )
 
 				# Exit code 130 is SIGINT so only check for exit code '1'
 				# If auCDtect failed to 
