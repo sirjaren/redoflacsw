@@ -3875,7 +3875,7 @@ if [[ "${os_name}" != "Cygwin" ]] ; then
 	{ __error "This version of redoflacs is meant to be run under" ; __newline ;} >&2
 	{ __error "Windows (Cygwin).  Please use the UNIX/Linux/BSD" ; __newline ;} >&2
 	{ __error "version located here:" ; __newline ;} >&2
-	{ __error "http://jcstrategix.com/redoflacs" ; __newline ;} >&2
+	{ __error "https://github.com/sirjaren/redoflacs/tags" ; __newline ;} >&2
 
 	exit 1
 fi
