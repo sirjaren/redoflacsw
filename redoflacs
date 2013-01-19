@@ -1797,7 +1797,7 @@ __iterate_count () {
 	printf '.' >> "${tmp_count_file}"
 
 	# Add current filename to tmp file
-	printf "${i}" > "${tmp_filename}"
+	printf "%s" "${i}" > "${tmp_filename}"
 
 	# Load ${tmp_count_file} into array
 	mapfile -n0 -t iteration_array < "${tmp_count_file}"
@@ -3952,7 +3952,6 @@ if [[ "${create_spectrogram}" == "true" ]] ; then
 		fi
 	fi
 fi
-
 
 # If ${jobs} wasn't set upon invocation, check in /proc
 # to see how many jobs should be run
