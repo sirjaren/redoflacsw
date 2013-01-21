@@ -3,6 +3,8 @@
 # redoflacs - Parallel BASH commandline FLAC compressor, verifier, organizer,
 #             analyzer, and retagger
 #-------------------------------------------------------------------------------
+# ~ THIS IS THE CYGWIN VERSION OF REDOFLACS ~
+#-------------------------------------------------------------------------------
 # Copyright (C) 2010-2013  Jaren Stangret
 #-------------------------------------------------------------------------------
 # This program is free software; you can redistribute it and/or
@@ -18,7 +20,7 @@
 # You should have received a copy of the GNU General Public License along
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
-
+#-------------------------------------------------------------------------------
 # You can follow development of this script on Github at:
 # https://github.com/sirjaren/redoflacs
 #
@@ -27,9 +29,6 @@
 # TODO: When flac releases a new version, create a check for
 #       ReplayGain values greater than 48kHz, and abort if flac
 #       is 1.2.1 or less
-#===============================================================================
-# // THIS IS THE CYGWIN VERSION OF REDOFLACS \\
-#===============================================================================
 #-------------------------------------------------------------------------------
 #  SCRIPT MESSAGES
 #-------------------------------------------------------------------------------
