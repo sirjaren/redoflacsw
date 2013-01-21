@@ -4051,7 +4051,7 @@ export -f __operation_prune
 shopt -s globstar
 
 # Version
-version="0.18.4_pre_cygwin"
+version="0.19_cygwin"
 
 # Various file extensions
 export flac_extension=".[Ff][Ll][Aa][Cc]"
