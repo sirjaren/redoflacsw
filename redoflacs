@@ -379,8 +379,8 @@ Jaren Stangret <sirjaren@gmail.com>
 .SH THANKS
 Thanks to all the people that provided feedback and support."
 
-	# Print out help (will be piped to ${PAGER} elsewhere)
-	printf "%s\n" "${long_help}"
+	# Print out help to temporary file which will read by 'man'
+	printf "%s\n" "${long_help}" > "${tmp_man_page}"
 }
 
 # Display short help
