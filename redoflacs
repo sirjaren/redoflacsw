@@ -3365,12 +3365,12 @@ __operation_aucdtect () {
 					decoded_wav="${drive_letter}:"${decoded_wav}""
 				fi
 
-				# The actual auCDtect command with highest accuracy setting
-				# 2> hides the displayed progress to /dev/null disabling the progress percentage
-				aucdtect_output=( "$(${aucdtect_command} -m0 "${decoded_wav}" 2>/dev/null)" )
+				# The actual auCDtect command with lowest accuracy setting (for
+				# speed). 2> hides the displayed progress to /dev/null disabling
+				# the progress percentage
+				aucdtect_output=( "$(${aucdtect_command} -m40 "${decoded_wav}" 2>/dev/null)" )
 
 				# Exit code 130 is SIGINT so only check for exit code '1'
-				# If auCDtect failed to 
 				if [[ "${?}" -eq "1" ]] ; then
 					__print_failed_flac
 					printf "%s\n%s\n%s\n%s\n%s\n%s\n" \
@@ -3400,59 +3400,21 @@ __operation_aucdtect () {
 					# There is an issue with the processed FLAC file
 					if [[ "${aucdtect_check_array[0]}" != "This track looks like CDDA with probability 100%" ]] ; then
 
-						# If user specified '-A, --aucdtect-spectrogram', then
-						# create a spectrogram with SoX and change logging accordingly
-						if [[ "${create_spectrogram}" == "true" ]] ; then
+						# The actual auCDtect command with highest accuracy
+						# setting (for accuracy). 2> hides the displayed
+						# progress to /dev/null disabling the progress
+						# percentage
+						aucdtect_output=( "$(${aucdtect_command} -m0 "${decoded_wav}" 2>/dev/null)" )
 
-							# Check whether to place spectrogram images in user-defined location
-							if [[ -z "${spectrogram_location}" ]] ; then
-
-								# Place images in same directory as the FLAC files
-								# Make sure we don't clobber any picture files
-								if [[ -f "${i%${flac_extension}}.png" ]] ; then
-									# File exists so prepend "spectrogram" before ".png"
-									spectrogram_picture="${i%${flac_extension}}.spectrogram.png"
-								else
-									# File doesn't exist, so create the spectrogram with the basename of "$i"
-									# with ".png" as the extension
-									spectrogram_picture="${i%${flac_extension}}.png"
-								fi
-							else
-								# Place images in user-defined location
-								flac_file="${i##*/}"
-								spectrogram_picture="${spectrogram_location}/${flac_file%${flac_extension}}.png"
-							fi
-
-							# Let's create the spectrogram for the failed FLAC
-							# file and output progress
-							__print_aucdtect_spectrogram
-
-							# Escape any braces in ${decode_wav_dir} to prevent
-							# SoX from interpreting them as a range.  We use a
-							# 'tmp' variable to make sure we can still remove
-							# the WAV file after SoX completes, otherwise we
-							# would not be able to remove the WAV file as the
-							# pathname has been modified
-							#
-							# Escapes left brace
-							decoded_wav_dir_tmp="${decoded_wav_dir//{/\{}"
-
-							# Escapes right brace
-							decoded_wav_dir_tmp="${decoded_wav_dir_tmp//\}/\}}"
-
-							# SoX command to create the spectrogram and place it in spectrogram_picture
-							"${sox_command}" "${decoded_wav_dir_tmp}/${decoded_wav_base}" -n spectrogram -c '' -t "${i}" -p1 -z90 -Z0 -q249 -wHann -x1800 -y513 -o "${spectrogram_picture}"
-
-							# Use the below version of the command to create hi-res spectrograms
-							#"${sox_command}" "${i}" -n spectrogram -c '' -t "${i_orig}" -p1 -z90 -Z0 -q249 -wHann -x5000 -y1025 -o "${spectrogram_picture}"
-
-							# Print ISSUE and log error, and show where to find
-							# the created spectrogram of the processed FLAC file
-							__print_aucdtect_issue
-							printf "%s\n%s\n%s\n%s\n" \
-								   "FLAC:        ${i}" \
-								   "ERROR:       ${aucdtect_check_array[0]}" \
-								   "SPECTROGRAM: ${spectrogram_picture}" \
+						# Exit code 130 is SIGINT so only check for exit code '1'
+						if [[ "${?}" -eq "1" ]] ; then
+							__print_failed_flac
+							printf "%s\n%s\n%s\n%s\n%s\n%s\n" \
+								   "FLAC:  ${i}" \
+								   "WAV:   ${decoded_wav}" \
+								   "ERROR: auCDtect failed to analyze the decoded WAV file." \
+								   "       Something may have happened when decoding the above FLAC" \
+								   "       file.  Please verify the FLAC file is not corrupt." \
 								   "------------------------------------------------------------------" \
 								   >> "${aucdtect_errors}"
 
@@ -3460,16 +3422,92 @@ __operation_aucdtect () {
 							__fail_count
 
 						else
-							# Print ISSUE and log error
-							__print_aucdtect_issue
-							printf "%s\n%s\n%s\n" \
-								   "FLAC:  ${i}" \
-								   "ERROR: ${aucdtect_check_array[0]}" \
-								   "------------------------------------------------------------------" \
-								   >> "${aucdtect_errors}"
+							# Grab the conclusion of auCDtect's command by only
+							# reading what is necessary:
+							#    -s7:  Discard first seven lines from auCDtect's output
+							#    -n1:  Only grab 1 line from auCDtect's output
+							#     -t:  Remove trailing newlines from auCDtect's output
+							#  array:  Store captured output into 'aucdtect_check_array'
+							mapfile -s7 -n1 -t aucdtect_check_array <<< "${aucdtect_output}"
 
-							# Add one to fail count
-							__fail_count
+							# Remove the carriage return from ${aucdtect_check_array[@]}
+							aucdtect_check_array=( "${aucdtect_check_array[@]%$'\r'}" )
+
+							# There is an issue with the processed FLAC file
+							if [[ "${aucdtect_check_array[0]}" != "This track looks like CDDA with probability 100%" ]] ; then
+
+								# If user specified '-A, --aucdtect-spectrogram', then
+								# create a spectrogram with SoX and change logging accordingly
+								if [[ "${create_spectrogram}" == "true" ]] ; then
+
+									# Check whether to place spectrogram images in user-defined location
+									if [[ -z "${spectrogram_location}" ]] ; then
+
+										# Place images in same directory as the FLAC files
+										# Make sure we don't clobber any picture files
+										if [[ -f "${i%${flac_extension}}.png" ]] ; then
+											# File exists so prepend "spectrogram" before ".png"
+											spectrogram_picture="${i%${flac_extension}}.spectrogram.png"
+										else
+											# File doesn't exist, so create the spectrogram with the basename of "$i"
+											# with ".png" as the extension
+											spectrogram_picture="${i%${flac_extension}}.png"
+										fi
+									else
+										# Place images in user-defined location
+										flac_file="${i##*/}"
+										spectrogram_picture="${spectrogram_location}/${flac_file%${flac_extension}}.png"
+									fi
+
+									# Let's create the spectrogram for the failed FLAC
+									# file and output progress
+									__print_aucdtect_spectrogram
+
+									# Escape any braces in ${decode_wav_dir} to prevent
+									# SoX from interpreting them as a range.  We use a
+									# 'tmp' variable to make sure we can still remove
+									# the WAV file after SoX completes, otherwise we
+									# would not be able to remove the WAV file as the
+									# pathname has been modified
+									#
+									# Escapes left brace
+									decoded_wav_dir_tmp="${decoded_wav_dir//{/\{}"
+
+									# Escapes right brace
+									decoded_wav_dir_tmp="${decoded_wav_dir_tmp//\}/\}}"
+
+									# SoX command to create the spectrogram and place it in spectrogram_picture
+									"${sox_command}" "${decoded_wav_dir_tmp}/${decoded_wav_base}" -n spectrogram -c '' -t "${i}" -p1 -z90 -Z0 -q249 -wHann -x1800 -y513 -o "${spectrogram_picture}"
+
+									# Use the below version of the command to create hi-res spectrograms
+									#"${sox_command}" "${i}" -n spectrogram -c '' -t "${i_orig}" -p1 -z90 -Z0 -q249 -wHann -x5000 -y1025 -o "${spectrogram_picture}"
+
+									# Print ISSUE and log error, and show where to find
+									# the created spectrogram of the processed FLAC file
+									__print_aucdtect_issue
+									printf "%s\n%s\n%s\n%s\n" \
+										   "FLAC:        ${i}" \
+										   "ERROR:       ${aucdtect_check_array[0]}" \
+										   "SPECTROGRAM: ${spectrogram_picture}" \
+										   "------------------------------------------------------------------" \
+										   >> "${aucdtect_errors}"
+
+									# Add one to fail count
+									__fail_count
+
+								else
+									# Print ISSUE and log error
+									__print_aucdtect_issue
+									printf "%s\n%s\n%s\n" \
+										   "FLAC:  ${i}" \
+										   "ERROR: ${aucdtect_check_array[0]}" \
+										   "------------------------------------------------------------------" \
+										   >> "${aucdtect_errors}"
+
+									# Add one to fail count
+									__fail_count
+								fi
+							fi
 						fi
 					fi
 
