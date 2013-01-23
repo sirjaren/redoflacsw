@@ -1323,6 +1323,12 @@ __aucdtect_abort () {
 	__info "Control-C received, removing temporary files and" ; __newline
 	__info "generating summary. Please wait..." ; __newline
 
+	# Explicitly stop auCDtect.exe (case-insensitive), allowing script to remove
+	# the temporary files.  This prevents the dreaded 'file or resource busy'
+	# message.  Send all output to /dev/null so nothing is shown.  Keep in mind
+	# 'taskkill' is a part of Windows via Cygwin and is invoked as such
+	taskkill /F /IM auCDtect.exe 1>/dev/null 2>&1
+
 	# Remove temporarily created WAV files (if any)
 	rm -f "${directory}"/**/*_redoflacs_[0-9]*.wav
 
@@ -3250,13 +3256,16 @@ __operation_aucdtect () {
 
 		# FLAC checks out, continue processing
 		else
-			# The WAV file to be created from current FLAC file
-			decoded_wav="${i%${flac_extension}}_redoflacs_"$$".wav"
+			# Set up the basename of the decoded WAV (for use with Sox - if
+			# applicable)
+			decoded_wav_base="${iteration}_redoflacs_$$.wav"
 
-			# Save ${decoded_wav} to a copy variable, which we'll use to
-			# delete the file after processing, as ${decoded_wav} will be
-			# changed below
-			decoded_wav_orig="${decoded_wav}"
+			# Grab the 'dirname' of the current FLAC file (for use with SoX
+			# and auCDtect)
+			decoded_wav_dir="${i%/*}"
+
+			# The WAV file to be created from current FLAC file
+			decoded_wav="${decoded_wav_dir}/${decoded_wav_base}"
 
 			# Decompress FLAC to WAV so auCDtect can read the audio file
 			flac --totally-silent -d "${i}" -o "${decoded_wav}"
@@ -3409,24 +3418,25 @@ __operation_aucdtect () {
 								spectrogram_picture="${spectrogram_location}/${flac_file%${flac_extension}}.png"
 							fi
 
-							# Let's create the spectrogram for the failed FLAC file
-							# and output progress
+							# Let's create the spectrogram for the failed FLAC
+							# file and output progress
 							__print_aucdtect_spectrogram
 
-							# Escape any braces in ${i} to prevent SoX from interpreting
-							# them as a range
+							# Escape any braces in ${decode_wav_dir} to prevent
+							# SoX from interpreting them as a range.  We use a
+							# 'tmp' variable to make sure we can still remove
+							# the WAV file after SoX completes, otherwise we
+							# would not be able to remove the WAV file as the
+							# pathname has been modified
 							#
-							# Create copy of ${i} to reset upon changing it
-							i_orig="${i}"
-
 							# Escapes left brace
-							i="${i//{/\{}"
+							decoded_wav_dir_tmp="${decoded_wav_dir//{/\{}"
 
 							# Escapes right brace
-							i="${i//\}/\}}"
+							decoded_wav_dir_tmp="${decoded_wav_dir_tmp//\}/\}}"
 
 							# SoX command to create the spectrogram and place it in spectrogram_picture
-							"${sox_command}" "${i}" -n spectrogram -c '' -t "${i_orig}" -p1 -z90 -Z0 -q249 -wHann -x1800 -y513 -o "${spectrogram_picture}"
+							"${sox_command}" "${decoded_wav_dir_tmp}/${decoded_wav_base}" -n spectrogram -c '' -t "${i}" -p1 -z90 -Z0 -q249 -wHann -x1800 -y513 -o "${spectrogram_picture}"
 
 							# Use the below version of the command to create hi-res spectrograms
 							#"${sox_command}" "${i}" -n spectrogram -c '' -t "${i_orig}" -p1 -z90 -Z0 -q249 -wHann -x5000 -y1025 -o "${spectrogram_picture}"
@@ -3435,7 +3445,7 @@ __operation_aucdtect () {
 							# the created spectrogram of the processed FLAC file
 							__print_aucdtect_issue
 							printf "%s\n%s\n%s\n%s\n" \
-								   "FLAC:        ${i_orig}" \
+								   "FLAC:        ${i}" \
 								   "ERROR:       ${aucdtect_check_array[0]}" \
 								   "SPECTROGRAM: ${spectrogram_picture}" \
 								   "------------------------------------------------------------------" \
@@ -3459,7 +3469,7 @@ __operation_aucdtect () {
 					fi
 
 					# Remove temporary WAV file
-					rm "${decoded_wav_orig}"
+					rm -f "${decoded_wav_dir}/${decoded_wav_base}"
 				fi
 			fi
 		fi
