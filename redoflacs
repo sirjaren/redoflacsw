@@ -2424,6 +2424,7 @@ __check_missing_programs () {
 	stty_exists="$(command -v stty)"
 	stat_exists="$(command -v stat)"
 	mkfifo_exists="$(command -v mkfifo)"
+	wc_exists="$(command -v wc)"
 	find_exists="$(command -v find)"
 	xargs_exists="$(command -v xargs)"
 	metaflac_exists="$(command -v metaflac)"
@@ -2449,6 +2450,10 @@ __check_missing_programs () {
 
 	if [[ -z "${mkfifo_exists}" ]] ; then
 		command_exists_array+=( "You can generally install \"mkfifo\" with the \"coreutils\" package." )
+	fi
+
+	if [[ -z "${wc_exists}" ]] ; then
+		command_exists_array+=( "You can generally install \"wc\" with the \"coreutils\" package." )
 	fi
 
 	if [[ -z "${find_exists}" ]] ; then
