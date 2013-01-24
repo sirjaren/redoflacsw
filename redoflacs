@@ -1344,6 +1344,7 @@ __aucdtect_abort () {
 
 	# Remove temporarily created WAV files (if any)
 	rm -f "${directory}"/**/*_redoflacs_[0-9]*.wav
+	rm -f "/tmp/"**/*_redoflacs_[0-9]*.wav
 
 	if [[ -f "${aucdtect_errors}" ]] ; then
 		__log_aucdtect
@@ -3601,22 +3602,22 @@ __operation_aucdtect () {
 								# create a spectrogram with SoX and change logging accordingly
 								if [[ "${create_spectrogram}" == "true" ]] ; then
 
+									# Obtain basename of current FLAC file (for
+									# use in spectrogram title)
+									flac_file="${i##*/}"
+
+									# Copy temporary WAV to /tmp to be
+									# processed by SoX (prevents issues
+									# with multibyte characters in pathname)
+									mv "${decoded_wav_dir}/${decoded_wav_base}" "/tmp/${decoded_wav_base}"
+
 									# Check whether to place spectrogram images in user-defined location
 									if [[ -z "${spectrogram_location}" ]] ; then
-										# Obtain basename of current FLAC file
-										flac_file="${i##*/}"
-
-										# Obtain dirname of current FLAC file
-										spectrogram_dirname="${i%/*}"
-
 										# Create the spectrogram with '.png' as the
 										# file extension, placed in the same
 										# directory as the current FLAC file
-										spectrogram_picture="${spectrogram_dirname}/[${iteration}] ${flac_file%${flac_extension}}.png"
+										spectrogram_picture="${decoded_wav_dir}/[${iteration}] ${flac_file%${flac_extension}}.png"
 									else
-										# Obtain basename of current FLAC file
-										flac_file="${i##*/}"
-
 										# Create the spectrogram with '.png' as the
 										# file extension, placed in the user-defined
 										# location
@@ -3627,21 +3628,8 @@ __operation_aucdtect () {
 									# file and output progress
 									__print_aucdtect_spectrogram
 
-									# Escape any braces in ${decode_wav_dir} to prevent
-									# SoX from interpreting them as a range.  We use a
-									# 'tmp' variable to make sure we can still remove
-									# the WAV file after SoX completes, otherwise we
-									# would not be able to remove the WAV file as the
-									# pathname has been modified
-									#
-									# Escapes left brace
-									decoded_wav_dir_tmp="${decoded_wav_dir//{/\{}"
-
-									# Escapes right brace
-									decoded_wav_dir_tmp="${decoded_wav_dir_tmp//\}/\}}"
-
 									# SoX command to create the spectrogram and place it in spectrogram_picture
-									"${sox_command}" "${decoded_wav_dir_tmp}/${decoded_wav_base}" -n spectrogram -c '' -t "${i}" -p1 -z90 -Z0 -q249 -wHann -x1800 -y513 -o "${spectrogram_picture}"
+									"${sox_command}" "/tmp/${decoded_wav_base}" -n spectrogram -c '' -t "${i}" -p1 -z90 -Z0 -q249 -wHann -x1800 -y513 -o "${spectrogram_picture}"
 
 									# Use the below version of the command to create hi-res spectrograms
 									#"${sox_command}" "${i}" -n spectrogram -c '' -t "${i_orig}" -p1 -z90 -Z0 -q249 -wHann -x5000 -y1025 -o "${spectrogram_picture}"
@@ -3675,8 +3663,9 @@ __operation_aucdtect () {
 						fi
 					fi
 
-					# Remove temporary WAV file
-					rm -f "${decoded_wav_dir}/${decoded_wav_base}"
+					# Remove temporary WAV file, hiding all output in the event
+					# of the file not being deleted due to resources busy
+					rm -f "/tmp/${decoded_wav_base}" 1>/dev/null 2>&1
 				fi
 			fi
 		fi
@@ -4568,6 +4557,19 @@ if [[ "${aucdtect_flac}" == "true" ]] ; then
 
 		exit 1
 	fi
+
+	# Explicitly stop auCDtect.exe (case-insensitive), allowing script to remove
+	# the temporary files.  This prevents the dreaded 'file or resource busy'
+	# message.  Send all output to /dev/null so nothing is shown.  Keep in mind
+	# 'taskkill' is a part of Windows via Cygwin and is invoked as such
+	taskkill /F /IM auCDtect.exe 1>/dev/null 2>&1
+
+	# Remove temporarily created WAV files (if any).
+	# Generally, any file removed at this point will be files
+	# that weren't able to be removed due to a file handle
+	# stealing resources
+	rm -f "${directory}"/**/*_redoflacs_[0-9]*.wav
+	rm -f "/tmp/"**/*_redoflacs_[0-9]*.wav
 
 	# auCDtect completed successfully
 	__print_ok_flac ; __newline
