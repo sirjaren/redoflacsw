@@ -3530,7 +3530,7 @@ __operation_aucdtect () {
 				# The actual auCDtect command with lowest accuracy setting (for
 				# speed). 2> hides the displayed progress to /dev/null disabling
 				# the progress percentage
-				aucdtect_output=( "$(${aucdtect_command} -m40 "${decoded_wav}" 2>/dev/null)" )
+				mapfile -n0 -t aucdtect_output < <(${aucdtect_command} -m40 "${decoded_wav}" 2>/dev/null)
 
 				# Exit code 130 is SIGINT so only check for exit code '1'
 				if [[ "${?}" -eq "1" ]] ; then
@@ -3548,16 +3548,11 @@ __operation_aucdtect () {
 					__fail_count
 
 				else
-					# Grab the conclusion of auCDtect's command by only
-					# reading what is necessary:
-					#    -s7:  Discard first seven lines from auCDtect's output
-					#    -n1:  Only grab 1 line from auCDtect's output
-					#     -t:  Remove trailing newlines from auCDtect's output
-					#  array:  Store captured output into 'aucdtect_check_array'
-					mapfile -s7 -n1 -t aucdtect_check_array <<< "${aucdtect_output}"
+					# Remove the carriage return from ${aucdtect_output[@]}
+					aucdtect_output=( "${aucdtect_output[@]//$'\r'/}" )
 
-					# Remove the carriage return from ${aucdtect_check_array[@]}
-					aucdtect_check_array=( "${aucdtect_check_array[@]%$'\r'}" )
+					# Grab the conclusion of auCDtect's command
+					aucdtect_check_array=( "${aucdtect_output[$(( ${#aucdtect_output[@]} - 2 ))]}" )
 
 					# There is an issue with the processed FLAC file
 					if [[ "${aucdtect_check_array[0]}" != "This track looks like CDDA with probability 100%" ]] ; then
@@ -3566,7 +3561,7 @@ __operation_aucdtect () {
 						# setting (for accuracy). 2> hides the displayed
 						# progress to /dev/null disabling the progress
 						# percentage
-						aucdtect_output=( "$(${aucdtect_command} -m0 "${decoded_wav}" 2>/dev/null)" )
+						mapfile -n0 -t aucdtect_output < <(${aucdtect_command} -m0 "${decoded_wav}" 2>/dev/null)
 
 						# Exit code 130 is SIGINT so only check for exit code '1'
 						if [[ "${?}" -eq "1" ]] ; then
@@ -3584,16 +3579,11 @@ __operation_aucdtect () {
 							__fail_count
 
 						else
-							# Grab the conclusion of auCDtect's command by only
-							# reading what is necessary:
-							#    -s7:  Discard first seven lines from auCDtect's output
-							#    -n1:  Only grab 1 line from auCDtect's output
-							#     -t:  Remove trailing newlines from auCDtect's output
-							#  array:  Store captured output into 'aucdtect_check_array'
-							mapfile -s7 -n1 -t aucdtect_check_array <<< "${aucdtect_output}"
+							# Remove the carriage return from ${aucdtect_output[@]}
+							aucdtect_output=( "${aucdtect_output[@]//$'\r'/}" )
 
-							# Remove the carriage return from ${aucdtect_check_array[@]}
-							aucdtect_check_array=( "${aucdtect_check_array[@]%$'\r'}" )
+							# Grab the conclusion of auCDtect's command
+							aucdtect_check_array=( "${aucdtect_output[$(( ${#aucdtect_output[@]} - 2 ))]}" )
 
 							# There is an issue with the processed FLAC file
 							if [[ "${aucdtect_check_array[0]}" != "This track looks like CDDA with probability 100%" ]] ; then
