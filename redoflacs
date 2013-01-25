@@ -4520,11 +4520,15 @@ fi
 
 # Grab the total flacs to process
 total_flacs_array=( "${directory}"/**/*${flac_extension} )
-export total_flacs="${#total_flacs_array[@]}"
 
-# String length of total number of flacs
-total_flacs_length="${#total_flacs_array[@]}"
-export total_flacs_length="${#total_flacs_length}"
+# Obtain the number of FLACs to process
+mapfile -n0 -t total_flacs < <(find "${directory}" -name "*"${flac_extension} -printf "\n")
+
+# Convert ${total_flacs} array into string with the number of indices
+export total_flacs"${#total_flacs[@]}"
+
+# String length of total number (#) of flacs
+export total_flacs_length="${#total_flacs}"
 
 # This displays '[ ok ]' after 'Finding FLAC files to process...'
 __processed_flacs_ok
