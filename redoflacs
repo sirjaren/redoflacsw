@@ -3165,6 +3165,19 @@ __operation_summary () {
 	# Remove the temporary filename file
 	rm -f "${tmp_filename}"
 
+	# Explicitly stop auCDtect.exe (case-insensitive), allowing script to remove
+	# the temporary files.  This prevents the dreaded 'file or resource busy'
+	# message.  Send all output to /dev/null so nothing is shown.  Keep in mind
+	# 'taskkill' is a part of Windows via Cygwin and is invoked as such
+	taskkill /F /IM auCDtect.exe 1>/dev/null 2>&1
+
+	# Remove temporarily created WAV files (if any).
+	# Generally, any file removed at this point will be files
+	# that weren't able to be removed due to a file handle
+	# stealing resources
+	rm -f "${directory}"/**/*_redoflacs_[0-9]*.wav
+	rm -f "/tmp/"**/*_redoflacs_[0-9]*.wav
+
 	# Restore the cursor
 	printf "\033[?25h"
 }
