@@ -2858,14 +2858,14 @@ __operation_summary () {
 			"Validate with auCDtect")
 				operation_spacing="   "
 			;;
+			"Check MD5 Signature")
+				operation_spacing="      "
+			;;
 			"Compress FLACS")
 				operation_spacing="           "
 			;;
 			"Test Flacs")
 				operation_spacing="               "
-			;;
-			"Check MD5 Signature")
-				operation_spacing="      "
 			;;
 			"Testing ReplayGain")
 				# Print the outer operation, with the sub operations
@@ -2983,6 +2983,25 @@ __operation_summary () {
 		__summary_line
 	fi
 
+	# MD5 Check operations
+	if [[ "${md5check_flac}" == "true" && "${md5check_complete}" == "true" ]] ; then
+		operation="Check MD5 Signature"
+		operation_summary="complete"
+		__summary_line
+	elif [[ "${md5check_flac}" == "true" && "${md5check_complete}" == "false" ]] ; then
+		operation="Check MD5 Signature"
+		operation_summary="failed"
+		__summary_line
+	elif [[ "${md5check_flac}" == "true" && "${md5check_complete}" == "interrupt" ]] ; then
+		operation="Check MD5 Signature"
+		operation_summary="interrupted"
+		__summary_line
+	elif [[ "${md5check_flac}" == "true" ]] ; then
+		operation="Check MD5 Signature"
+		operation_summary="did not run"
+		__summary_line
+	fi
+
 	# Compress Flacs operations
 	if [[ "${compress_flac}" == "true" && "${compress_complete}" == "true" ]] ; then
 		operation="Compress FLACS"
@@ -3017,25 +3036,6 @@ __operation_summary () {
 		__summary_line
 	elif [[ "${test_flac}" == "true" ]] ; then
 		operation="Test Flacs"
-		operation_summary="did not run"
-		__summary_line
-	fi
-
-	# MD5 Check operations
-	if [[ "${md5check_flac}" == "true" && "${md5check_complete}" == "true" ]] ; then
-		operation="Check MD5 Signature"
-		operation_summary="complete"
-		__summary_line
-	elif [[ "${md5check_flac}" == "true" && "${md5check_complete}" == "false" ]] ; then
-		operation="Check MD5 Signature"
-		operation_summary="failed"
-		__summary_line
-	elif [[ "${md5check_flac}" == "true" && "${md5check_complete}" == "interrupt" ]] ; then
-		operation="Check MD5 Signature"
-		operation_summary="interrupted"
-		__summary_line
-	elif [[ "${md5check_flac}" == "true" ]] ; then
-		operation="Check MD5 Signature"
 		operation_summary="did not run"
 		__summary_line
 	fi
@@ -4610,6 +4610,50 @@ fi
 
 
 #-------------------------------------------------------------------------------
+#  MD5 CHECK
+#-------------------------------------------------------------------------------
+if [[ "${md5check_flac}" == "true" ]] ; then
+	__title_md5check_flac
+
+	# Trap SIGINT (Control-C) to abort cleanly
+	trap __md5_check_abort SIGINT
+
+	# Clear/initialize iteration
+	> "${tmp_count_file}"
+
+	# Unset any functions that were a result of previous operations
+	__tidy_env
+
+	# Export the necessary functions to allow subshell access
+	export -f \
+		__operation_md5_check \
+		__md5_check_abort \
+		__print_checking_md5 \
+		__print_ok_flac \
+		__print_failed_flac \
+		__print_interrupt \
+		__log_md5_check
+
+	# Run the above function with the configured jobs
+	find "${directory}" -name "*${flac_extension}" -print0 2> /dev/null | xargs -0 -n 1 -P "${jobs}" bash -c '__operation_md5_check "${@}"' --
+
+	if [[ -f "${md5_errors}" ]] ; then
+		__log_md5_check
+
+		md5check_complete="false"
+		__operation_summary
+
+		exit 1
+	fi
+
+	# MD5 Check completed successfully
+	__print_ok_flac ; __newline
+	md5check_complete="true"
+fi
+#== END MD5 CHECK ==============================================================
+
+
+#-------------------------------------------------------------------------------
 #  COMPRESS/VERIFY
 #-------------------------------------------------------------------------------
 if [[ "${compress_flac}" == "true" ]] ; then
@@ -4709,50 +4753,6 @@ if [[ "${test_flac}" == "true" ]] ; then
 	test_complete="true"
 fi
 #== END TEST ===================================================================
-
-
-#-------------------------------------------------------------------------------
-#  MD5 CHECK
-#-------------------------------------------------------------------------------
-if [[ "${md5check_flac}" == "true" ]] ; then
-	__title_md5check_flac
-
-	# Trap SIGINT (Control-C) to abort cleanly
-	trap __md5_check_abort SIGINT
-
-	# Clear/initialize iteration
-	> "${tmp_count_file}"
-
-	# Unset any functions that were a result of previous operations
-	__tidy_env
-
-	# Export the necessary functions to allow subshell access
-	export -f \
-		__operation_md5_check \
-		__md5_check_abort \
-		__print_checking_md5 \
-		__print_ok_flac \
-		__print_failed_flac \
-		__print_interrupt \
-		__log_md5_check
-
-	# Run the above function with the configured jobs
-	find "${directory}" -name "*${flac_extension}" -print0 2> /dev/null | xargs -0 -n 1 -P "${jobs}" bash -c '__operation_md5_check "${@}"' --
-
-	if [[ -f "${md5_errors}" ]] ; then
-		__log_md5_check
-
-		md5check_complete="false"
-		__operation_summary
-
-		exit 1
-	fi
-
-	# MD5 Check completed successfully
-	__print_ok_flac ; __newline
-	md5check_complete="true"
-fi
-#== END MD5 CHECK ==============================================================
 
 
 #-------------------------------------------------------------------------------
