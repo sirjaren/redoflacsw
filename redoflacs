@@ -4290,7 +4290,7 @@ export -f __operation_prune
 shopt -s globstar
 
 # Version
-version="0.20 (Cygwin)"
+version="0.21_pre (Cygwin)"
 
 # This sets the script revision (used to compare against user revision)
 script_revision="1"
