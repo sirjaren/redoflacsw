@@ -2135,8 +2135,31 @@ __filename () {
 	export current_filename_length="$(wc -L <<< "${filename}")"
 
 	# Cull filename and add an ellipsis if the filename is too long
-	if [[ "${current_filename_length}" -gt "${max_filename_length}" ]] ; then
-		export filename="${filename::${max_filename_length}}…"
+	if (( current_filename_length > max_filename_length )) ; then
+
+		# Grab the current filename length after it's been culled by the maximum
+		# length allowed by ${columns}
+		culled_filename_length="$(wc -L <<< "${filename::${max_filename_length}}")"
+
+		# Set a placeholder ${max_filename_length} to be changed in the loop
+		# below
+		max_length="${max_filename_length}"
+
+		# Keep looping until the culled filename length equals the maximum
+		# length allowed via ${columns}
+		until (( culled_filename_length == max_filename_length )) ; do
+
+			# Decrement placeholder ${max_length} by one (1)
+			((--max_length))
+			
+			# Obtain the new culled filename length
+			culled_filename_length="$(wc -L <<< "${filename::${max_length}}")"
+
+		done
+
+		# Set the culled filename to display slicing the correct amount of
+		# characters determined from ${max_length}
+		export filename="${filename::${max_length}}…"
 	fi
 }
 export -f __filename
