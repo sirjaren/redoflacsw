@@ -26,10 +26,6 @@
 #
 # Please submit requests/changes/patches and/or comments
 #-------------------------------------------------------------------------------
-# TODO: When flac releases a new version, create a check for
-#       ReplayGain values greater than 48kHz, and abort if flac
-#       is 1.2.1 or less
-#-------------------------------------------------------------------------------
 #  SCRIPT MESSAGES
 #-------------------------------------------------------------------------------
 # Bold green message
@@ -511,8 +507,11 @@ __header_replaygain_test () {
 		   "# ReplayGain compatability.  The only message displayed to your screen that is #"
 		   "# logged is noted below:                                                       #"
 		   "#                                                                              #"
+		   "#     [ Issue ]  :  The FLAC has a sample rate greater than 48kHz and the      #"
+		   "#                   version of \`flac' installed is NOT greater than 1.2.1.     #"
+		   "#                                                                              #"
 		   "#    [ Failed ]  :  The FLAC is unable to have ReplayGain applied to it        #"
-		   "#                   because the FLAC file turned out to be fake                #"
+		   "#                   because the FLAC file turned out to be fake.               #"
 		   "#                                                                              #"
 		   "#                          -------------------------                           #"
 		   "#                                                                              #"
@@ -774,7 +773,7 @@ __header_prune () {
 		   "#                               PRUNE ERROR LOG                                #"
 		   "#                               ---------------                                #"
 		   "#   This report details the errors that may happen when pruning the various    #"
-		   "# METADTA blocks in a FLAC file.  The only message displayed to your screen    #"
+		   "# METADATA blocks in a FLAC file.  The only message displayed to your screen   #"
 		   "# that is logged is noted below:                                               #"
 		   "#                                                                              #"
 		   "#            [ Failed ]  :  The FLAC file is not a real FLAC file              #"
@@ -1235,8 +1234,8 @@ __print_aucdtect_flac () {
 	"   " "[${iteration}/${total_flacs}]" " ${filename} " "" "[" " " "Validating FLAC" " " "]" " "
 }
 
-# auCDtect issue
-__print_aucdtect_issue () {
+# FLAC issue
+__print_issue () {
 	# Obtain the number of columns returned as ${columns}
 	__columns
 
@@ -1285,8 +1284,8 @@ __print_aucdtect_spectrogram () {
 	"   " "[${iteration}/${total_flacs}]" " ${filename} " "" "[" " " "Creating Spectrogram" " " "]" " "
 }
 
-# auCDtect skip
-__print_aucdtect_skip () {
+# Skip FLAC file
+__print_skip () {
 	# Obtain the number of columns returned as ${columns}
 	__columns
 
@@ -1306,7 +1305,7 @@ __print_aucdtect_skip () {
 	# Create and cull filename if needed returned as ${filename}
 	__filename
 
-	printf "\r${normal}%s${red}%s${normal}%s%$(__current_length)s${blue}%s${normal}%s${yellow}%s${normal}%s${blue}%s${normal}%s\n" \
+	printf "\r${normal}%s${yellow}%s${normal}%s%$(__current_length)s${blue}%s${normal}%s${yellow}%s${normal}%s${blue}%s${normal}%s\n" \
 	"     " "*" " ${filename} " "" "[" " " "Skipped" " " "]" " "
 }
 
@@ -1838,6 +1837,24 @@ __prune_abort () {
 # Display script version
 __print_version () {
 	printf "%s\n" "Version ${version}"
+}
+
+# Obtain `metaflac' version information to test on.  Example:
+#   metaflac 1.3.0pre1
+#   -----------^
+# Test only the second integer in the version string above
+__metaflac_version () {
+	# Obtain entire version string, example:
+	#    metaflac 1.3.0pre1
+	metaflac_version="$(metaflac --version)"
+
+	# Remove first part of string including first integer, example:
+	#    3.0pre1
+	metaflac_version="${metaflac_version#* [[:digit:]].}"
+
+	# Remove last part of string, leaving only the second integer, example:
+	#    3
+	metaflac_version="${metaflac_version%.*}"
 }
 
 # Force the creation of a new configuration file
@@ -3559,8 +3576,10 @@ __operation_test_replaygain () {
 		# Prints current file and operation
 		__print_test_replaygain
 
-		# Check if file is a FLAC file (hide output)
-		metaflac --show-md5sum "${i}" >/dev/null 2>&1
+		# Check if file is a FLAC file (capture output) via obtaining the sample
+		# rate of the current file.  The sample rate captured will be tested
+		# against later on.  Hide STDERR as we'll test the exit code instead
+		current_sample_rate="$(metaflac --show-sample-rate "${i}" 2>/dev/null)"
 
 		# Exit code 130 is SIGINT so only check for exit code '1'
 		if (( ${?} == 1 )) ; then
@@ -3579,6 +3598,35 @@ __operation_test_replaygain () {
 
 			# Add one to fail count
 			__fail_count
+		else
+			# File is OK, test if sample rate is above 48kHz and the version of
+			# `metaflac' installed is greater than 1.2.1
+			if (( current_sample_rate > 48000 )) ; then
+
+				# Sample rate is greater than 48kHz, so check to make sure the
+				# version of `metaflac' is greater than 1.2.1
+				if (( metaflac_version < 3 )) ; then
+					# Old version of `metaflac' installed, display skipped
+					__print_issue
+
+					# The `metaflac' version installed is NOT greater than 1.2.1 so
+					# skip processing current FLAC file, logging why it was skipped
+					printf "\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n\n%s\n" \
+						   "            FLAC FILE  :  ${i##*/}" \
+						   "   FLAC FILE LOCATION  :  ${i%/*}" \
+						   "                       :" \
+						   "                ERROR  :  FLAC file has a sample rate greater than 48kHz and was" \
+						   "                       :  subsequently skipped because the version of \`flac'" \
+						   "                       :  currently installed is NOT greater than 1.2.1, which" \
+						   "                       :  is required to process high sample rate FLAC files." \
+						   "--------------------------------------------------------------------------------" \
+						   >> "${replay_test_errors}"
+
+					# Add one to fail count
+					__fail_count
+				fi
+			fi
+
 		fi
 	done
 }
@@ -3843,7 +3891,7 @@ __operation_aucdtect () {
 		elif (( bits > 16 )) ; then
 
 			# Print skipped FLAC file and log issue
-			__print_aucdtect_skip
+			__print_skip
 
 			# Log skipped FLAC file
 			printf "\n%s\n%s\n%s\n%s\n%s\n%s\n\n%s\n" \
@@ -4114,7 +4162,7 @@ __operation_aucdtect () {
 
 									# Print ISSUE and log issue, and show where to find
 									# the created spectrogram of the processed FLAC file
-									__print_aucdtect_issue
+									__print_issue
 
 									# Log auCDtect report
 									printf "\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n\n%s\n" \
@@ -4133,7 +4181,7 @@ __operation_aucdtect () {
 
 								else
 									# Print ISSUE and log issue
-									__print_aucdtect_issue
+									__print_issue
 
 									# Log auCDtect report
 									printf "\n%s\n%s\n%s\n%s\n\n%s\n" \
@@ -5282,6 +5330,13 @@ if [[ "${replaygain_flac}" == "true" ]] ; then
 
 	# Prints title message of current operation
 	__title_replaygain
+
+	# Obtain `metaflac' version information to test on.  Example:
+	#   metaflac 1.3.0pre1
+	#   -----------^
+	# Test only the second integer in the version string above
+	__metaflac_version
+
 
 	#---------------------------------------------------------------------------
 	#  TEST REPLAYGAIN
