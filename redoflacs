@@ -62,7 +62,7 @@ __coverart_warning () {
 }
 export -f __coverart_warning
 
-# Display (in bold red) message that system is missing vital programs
+# Display message that system is missing vital programs
 __display_missing_commands_header () {
 	__error "You seem to be missing one or more necessary programs\n" >&2
 	__error "to run this script reliably.  Below shows the program(s)\n" >&2
@@ -429,7 +429,7 @@ __log_replaygain_test () {
 	__newline >&2
 	__error "There were issues with some of the FLAC files,\n" >&2
 	__error "please check:\n" >&2
-	__error "  ${cyan}${replay_test_errors}${normal}\n" >&2
+	__error "${cyan}${replay_test_errors}${normal}\n" >&2
 	__error "for details.\n" >&2
 }
 
@@ -438,7 +438,7 @@ __log_replaygain_process () {
 	__newline >&2
 	__error "There were issues adding ReplayGain values,\n" >&2
 	__error "please check:\n" >&2
-	__error "  ${cyan}${replay_add_errors}${normal}\n" >&2
+	__error "${cyan}${replay_add_errors}${normal}\n" >&2
 	__error "for details.\n" >&2
 }
 
@@ -446,7 +446,7 @@ __log_replaygain_process () {
 __log_compress_verify () {
 	__newline >&2
 	__error "Errors found in some FLAC files, please check:\n" >&2
-	__error "  ${cyan}${verify_errors}${normal}\n" >&2
+	__error "${cyan}${verify_errors}${normal}\n" >&2
 	__error "for errors.\n" >&2
 }
 
@@ -454,7 +454,7 @@ __log_compress_verify () {
 __log_test () {
 	__newline >&2
 	__error "Errors found in some FLAC files, please check:\n" >&2
-	__error "  ${cyan}${test_errors}${normal}\n" >&2
+	__error "${cyan}${test_errors}${normal}\n" >&2
 	__error "for errors.\n" >&2
 }
 
@@ -462,7 +462,7 @@ __log_test () {
 __log_aucdtect () {
 	__newline >&2
 	__error "Some FLAC files may be lossy sourced, please check:\n" >&2
-	__error "  ${cyan}${aucdtect_errors}${normal}\n" >&2
+	__error "${cyan}${aucdtect_errors}${normal}\n" >&2
 	__error "for details.\n" >&2
 }
 
@@ -471,7 +471,7 @@ __log_md5_check () {
 	__newline >&2
 	__error "The MD5 Signature is unset for some FLAC files or there were\n" >&2
 	__error "issues with some of the FLAC files, please check:\n" >&2
-	__error "  ${cyan}${md5_errors}${normal}\n" >&2
+	__error "${cyan}${md5_errors}${normal}\n" >&2
 	__error "for details.\n" >&2
 }
 
@@ -480,7 +480,7 @@ __log_missing_tags () {
 	__newline >&2
 	__error "Some FLAC files have missing tags or there were\n" >&2
 	__error "issues with some of the FLAC files, please check:\n" >&2
-	__error "  ${cyan}${metadata_errors}${normal}\n" >&2
+	__error "${cyan}${metadata_errors}${normal}\n" >&2
 	__error "for details.\n" >&2
 }
 
@@ -489,7 +489,7 @@ __log_prune () {
 	__newline >&2
 	__error "There were issues with some of the FLAC files,\n" >&2
 	__error "please check:\n" >&2
-	__error "  ${cyan}${prune_errors}${normal}\n" >&2
+	__error "${cyan}${prune_errors}${normal}\n" >&2
 	__error "for details.\n" >&2
 }
 #== .: END LOG MESSAGES :. =====================================================
@@ -1566,6 +1566,10 @@ __replaygain_test_abort () {
 	# for the displayed message below
 	__obtain_count_filename
 
+	# Kill spinner
+	__kill_spinner
+
+	# Print current FLAC file that is interrupted
 	__print_interrupt_replaygain_file
 
 	__newline
@@ -1579,7 +1583,10 @@ __replaygain_test_abort () {
 		__header_replaygain_test
 	fi
 
+	# Store operation status for Summary Of Operations
 	testing_replaygain_complete="interrupt"
+
+	# Display Summary Of Operations
 	__operation_summary
 
 	exit 130
@@ -1591,6 +1598,10 @@ __replaygain_process_abort () {
 	# for the displayed message below
 	__obtain_count_filename
 
+	# Kill spinner
+	__kill_spinner
+
+	# Print current FLAC file that is interrupted
 	__print_interrupt_replaygain_dir
 
 	__newline
@@ -1604,7 +1615,10 @@ __replaygain_process_abort () {
 		__header_replaygain_test
 	fi
 
+	# Store operation status for Summary Of Operations
 	adding_replaygain_complete="interrupt"
+
+	# Display Summary Of Operations
 	__operation_summary
 
 	exit 130
@@ -1645,6 +1659,10 @@ __test_abort () {
 	# for the displayed message below
 	__obtain_count_filename
 
+	# Kill spinner
+	__kill_spinner
+
+	# Print current FLAC file that is interrupted
 	__print_interrupt
 
 	__newline
@@ -1658,7 +1676,10 @@ __test_abort () {
 		__header_test
 	fi
 
+	# Store operation status for Summary Of Operations
 	test_complete="interrupt"
+
+	# Display Summary Of Operations
 	__operation_summary
 
 	exit 130
@@ -1670,6 +1691,10 @@ __aucdtect_abort () {
 	# for the displayed message below
 	__obtain_count_filename
 
+	# Kill spinner
+	__kill_spinner
+
+	# Print current FLAC file that is interrupted
 	__print_interrupt
 
 	__newline
@@ -1694,7 +1719,10 @@ __aucdtect_abort () {
 		__header_aucdtect
 	fi
 
+	# Store operation status for Summary Of Operations
 	aucdtect_complete="interrupt"
+
+	# Display Summary Of Operations
 	__operation_summary
 
 	exit 130
@@ -1706,6 +1734,10 @@ __md5_check_abort () {
 	# for the displayed message below
 	__obtain_count_filename
 
+	# Kill spinner
+	__kill_spinner
+
+	# Print current FLAC file that is interrupted
 	__print_interrupt
 
 	__newline
@@ -1719,7 +1751,10 @@ __md5_check_abort () {
 		__header_md5_check
 	fi
 
+	# Store operation status for Summary Of Operations
 	md5check_complete="interrupt"
+
+	# Display Summary Of Operations
 	__operation_summary
 
 	exit 130
@@ -1731,6 +1766,10 @@ __analyzing_tags_abort () {
 	# for the displayed message below
 	__obtain_count_filename
 
+	# Kill spinner
+	__kill_spinner
+
+	# Print current FLAC file that is interrupted
 	__print_retag_analyze_interrupt
 
 	__newline
@@ -1768,7 +1807,10 @@ __analyzing_tags_abort () {
 		__header_retag
 	fi
 
+	# Store operation status for Summary Of Operations
 	analyzing_retag_complete="interrupt"
+
+	# Display Summary Of Operations
 	__operation_summary
 
 	exit 1
@@ -1780,6 +1822,10 @@ __applying_tags_abort () {
 	# for the displayed message below
 	__obtain_count_filename
 
+	# Kill spinner
+	__kill_spinner
+
+	# Print current FLAC file that is interrupted
 	__print_retag_apply_interrupt
 
 	__newline
@@ -1816,7 +1862,10 @@ __applying_tags_abort () {
 		__header_retag
 	fi
 
+	# Store operation status for Summary Of Operations
 	applying_retag_complete="interrupt"
+
+	# Display Summary Of Operations
 	__operation_summary
 
 	exit 1
@@ -1828,6 +1877,10 @@ __prune_abort () {
 	# for the displayed message below
 	__obtain_count_filename
 
+	# Kill spinner
+	__kill_spinner
+
+	# Print current FLAC file that is interrupted
 	__print_interrupt
 
 	__newline
@@ -1841,7 +1894,10 @@ __prune_abort () {
 		__header_prune
 	fi
 
+	# Store operation status for Summary Of Operations
 	prune_complete="interrupt"
+
+	# Display Summary Of Operations
 	__operation_summary
 
 	exit 1
@@ -1906,7 +1962,7 @@ __new_config () {
 
 	# Explain to user where to find the new configuration file
 	__info "A new configuration file has been created here:\n"
-	__info "   ${cyan}${config_location}${normal}\n\n"
+	__info "${cyan}${config_location}${normal}\n\n"
 
 	__info "It's recommended to review the new configuration file\n"
 	__info "and transfer over any changes you made in your old\n"
@@ -2237,7 +2293,7 @@ __spinner () {
 }
 export -f __spinner
 
-# Start the spinner on the first FLAC file being processed
+# Start the spinner on the first file/directory being processed
 __start_spinner () {
 	if (( iteration == 1 )) ; then
 		# Display spinner as a separate process (forked to background)
@@ -2411,22 +2467,10 @@ __top_banner () {
 	__info "Finding FLAC files to process..."
 }
 
-# Below creates the '[ ok ]' message to print after the info
-# line above.  This will be displayed when all the FLAC files
-# have been mapped to an array
+# Below creates the '[ ok ]' message to print after the info line above.  This
+# will be displayed when all the FLAC files have been mapped to an array
 __processed_flacs_ok () {
-	__columns
-	# ${flacs_ok_spacing} is the spacing from the number of
-	# ${columns} minus the number of printed characters:
-	#
-	#  * Finding FLAC files to process... <- ${flacs_ok_spacing} -> [ ok ]
-	#                                     ^^^^^^^^^^^^^^^^^^^^^^^^^
-	# 42 is the number of printed characters printed and is what is subtracted
-	# from ${columns) to get ${flacs_ok_spacing}:
-	#
-	#  ' * Finding FLAC files to process...'  (35 characters)
-	#                              '[ ok ] '  ( 7 characters)
-	printf "${normal}%$((columns - 42))s${blue}%s${normal}%s${green}%s${normal}%s${blue}%s${normal}" \
+	printf "${normal}%11s${blue}%s${normal}%s${green}%s${normal}%s${blue}%s${normal}" \
 	"" "[" " " "ok" " " "]"
 }
 
@@ -2451,8 +2495,8 @@ __countdown_metadata () {
 	__error "${cyan}COVERART${normal} tag when re-tagging files.  Change the ${cyan}remove_artwork${normal}\n" >&2
 	__error "option (in the configuration file) to ${cyan}false${normal} to keep the legacy\n" >&2
 	__error "${cyan}COVERART${normal} tag, or add the ${cyan}COVERART${normal} tag to the list of tags to\n" >&2
-	__error "be kept in the ${cyan}TAGGING SECTION${normal} of the configuration file.\n" >&2
-	__error "\n" >&2
+	__error "be kept in the ${cyan}TAGGING SECTION${normal} of the configuration file.\n\n" >&2
+
 	__error "Keep in mind, if the ${cyan}remove_artwork${normal} option is set to ${cyan}false${normal},\n" >&2
 	__error "embedded artwork in the ${cyan}PICTURE${normal} block will be kept when using\n" >&2
 	__error "${cyan}-p, --prune${normal} option as well.\n\n" >&2
@@ -2481,7 +2525,7 @@ __countdown_config () {
 	__warn "file for use with this program.\n\n" >&2
 
 	__warn "To generate a new configuration file, run:\n" >&2
-	__warn "   ${cyan}redoflacs --new-config${normal}\n\n" >&2
+	__warn "${cyan}redoflacs --new-config${normal}\n\n" >&2
 
 	__warn "The above command will _NOT_ overwrite your\n" >&2
 	__warn "current configuration file.\n\n" >&2
@@ -3132,7 +3176,7 @@ __check_missing_programs () {
 			if [[ ! -x "${aucdtect_exists}" ]] ; then
 				__error "It appears ${cyan}auCDtect${normal} is not executable.  In order to make\n" >&2
 				__error "${cyan}auCDtect${normal} executable, run:\n" >&2
-				__error "  ${cyan}chmod +x \"${aucdtect_exists}\"${normal}\n" >&2
+				__error "${cyan}chmod +x \"${aucdtect_exists}\"${normal}\n" >&2
 
 				exit 1
 			fi
@@ -3405,10 +3449,49 @@ __operation_summary () {
 		esac
 	}
 
+	#---------------------------------------------------------------------------
+	# .: CLEANUP SECTION :.
+	#---------------------------------------------------------------------------
+	# Kill spinner
+	__kill_spinner
+
+	# Restore old stty settings, make stty happy
+	# by redirecting /dev/stderr
+	stty ${old_stty} < /dev/stderr
+
+	# Remove temporary iteration file
+	rm -f "${tmp_count_file}"
+
+	# Remove the failed count file
+	rm -f "${tmp_fail_count}"
+
+	# Remove spinner PID file
+	rm -f "${tmp_spinner_pid}"
+
+	# Remove the temporary filename file
+	rm -f "${tmp_filename}"
+
+	# Explicitly stop auCDtect.exe (case-insensitive), allowing script to remove
+	# the temporary files.  This prevents the dreaded 'file or resource busy'
+	# message.  Send all output to /dev/null so nothing is shown.  Keep in mind
+	# 'taskkill' is a part of Windows via Cygwin and is invoked as such
+	taskkill /F /IM auCDtect.exe 1>/dev/null 2>&1
+
+	# Remove temporarily created WAV files (if any).
+	# Generally, any file removed at this point will be files
+	# that weren't able to be removed due to a file handle
+	# stealing resources
+	rm -f "${directory}"/**/*_redoflacs_[0-9]*.wav
+	rm -f "/tmp/"**/*_redoflacs_[0-9]*.wav
+
+	# Restore the cursor
+	printf "\033[?25h"
+	#== .: END CLEANUP SECTION :. ==============================================
+
 	# Begin printing the table
 
 	# Title
-	printf "  \n${normal}%s${blue}%s${normal}\n" \
+	printf "\n${normal}%s${blue}%s${normal}\n" \
 	" " "---------------------------------------------------"
 	printf "${normal}%s\n" \
 	"                Summary Of Operations"
@@ -3600,45 +3683,6 @@ __operation_summary () {
 
 	printf "${normal}%s${blue}%s${normal}\n" \
 	" " "-------------------------+-------------------------"
-
-	#---------------------------------------------------------------------------
-	# .: CLEANUP SECTION :.
-	#---------------------------------------------------------------------------
-	# Kill spinner
-	__kill_spinner
-
-	# Restore old stty settings, make stty happy
-	# by redirecting /dev/stderr
-	stty ${old_stty} < /dev/stderr
-
-	# Remove temporary iteration file
-	rm -f "${tmp_count_file}"
-
-	# Remove the failed count file
-	rm -f "${tmp_fail_count}"
-
-	# Remove spinner PID file
-	rm -f "${tmp_spinner_pid}"
-
-	# Remove the temporary filename file
-	rm -f "${tmp_filename}"
-
-	# Explicitly stop auCDtect.exe (case-insensitive), allowing script to remove
-	# the temporary files.  This prevents the dreaded 'file or resource busy'
-	# message.  Send all output to /dev/null so nothing is shown.  Keep in mind
-	# 'taskkill' is a part of Windows via Cygwin and is invoked as such
-	taskkill /F /IM auCDtect.exe 1>/dev/null 2>&1
-
-	# Remove temporarily created WAV files (if any).
-	# Generally, any file removed at this point will be files
-	# that weren't able to be removed due to a file handle
-	# stealing resources
-	rm -f "${directory}"/**/*_redoflacs_[0-9]*.wav
-	rm -f "/tmp/"**/*_redoflacs_[0-9]*.wav
-
-	# Restore the cursor
-	printf "\033[?25h"
-	#== .: END CLEANUP SECTION :. ==============================================
 }
 #== .: END VARIOUS COMMANDS :. =================================================
 
@@ -5029,7 +5073,7 @@ if (( EUID == 0 )) ; then
 		# Inform user of created configuration file, reminding them to check
 		# it over before running program
 		__info "A configuration file has been created here:\n"
-		__info "  ${cyan}${config_location}${normal}\n\n"
+		__info "${cyan}${config_location}${normal}\n\n"
 
 		__info "Please review it before running this program.\n"
 
@@ -5055,7 +5099,7 @@ else
 		# Inform user of created configuration file, reminding them to check
 		# it over before running program
 		__info "A configuration file has been created here:\n"
-		__info "  ${cyan}${config_location}${normal}\n\n"
+		__info "${cyan}${config_location}${normal}\n\n"
 
 		__info "Please review it before running this program.\n"
 
