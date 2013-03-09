@@ -810,43 +810,57 @@ __header_prune () {
 #-------------------------------------------------------------------------------
 # Compress FLACS & verify
 __title_compress_flac () {
-	__newline
+	# Special newline to ensure leftover spinner is hidden
+	printf "  \n"
+
 	__info "Compressing & Verifying FLAC Files :: ${cyan}[Compression: ${compression_level}]${normal}\n"
 }
 
 # Compress FLACS & no verify
 __title_compress_notest_flac () {
-	__newline
+	# Special newline to ensure leftover spinner is hidden
+	printf "  \n"
+
 	__info "Compressing FLAC Files :: ${cyan}[Compression: ${compression_level}]${normal}\n"
 }
 
 # Apply ReplayGain to FLACS
 __title_replaygain () {
-	__newline
+	# Special newline to ensure leftover spinner is hidden
+	printf "  \n"
+
 	__info "Generating & Applying ReplayGain\n"
 }
 
 # Retag FLACS
 __title_retag () {
-	__newline
+	# Special newline to ensure leftover spinner is hidden
+	printf "  \n"
+
 	__info "Retagging FLAC Files\n"
 }
 
 # Testing FLACS
 __title_testing_flac () {
-	__newline
+	# Special newline to ensure leftover spinner is hidden
+	printf "  \n"
+
 	__info "Testing FLAC Files\n"
 }
 
 # Validating FLACS with auCDtect
 __title_aucdtect_flac () {
-	__newline
+	# Special newline to ensure leftover spinner is hidden
+	printf "  \n"
+
 	__info "Validating FLAC Files with auCDtect\n"
 }
 
 # Checking MD5 of FLACS
 __title_md5check_flac () {
-	__newline
+	# Special newline to ensure leftover spinner is hidden
+	printf "  \n"
+
 	__info "Checking MD5 Signature\n"
 }
 
@@ -861,7 +875,9 @@ __title_prune_flac () {
 		local metadata_removed="${cyan}STREAMINFO${normal} and ${cyan}VORBIS_COMMENT${normal}"
 	fi
 
-	__newline
+	# Special newline to ensure leftover spinner is hidden
+	printf "  \n"
+
 	__info "Pruning blocks except ${metadata_removed}\n"
 }
 #== .: END TITLE MESSAGES :. ===================================================
@@ -2203,6 +2219,50 @@ __current_length () {
 }
 export -f __current_length
 
+# Print out spinner
+__spinner () {
+	# Array houses various spinner incarnations
+	spinner=( '|' '/' '-' '\' )
+
+	# Run indefinitely
+	while true; do
+		# Print each index of the spinner array
+		for i in "${spinner[@]}" ; do
+			printf "\r ${cyan}%s${normal} " "${i}"
+
+			# Sleep so the spinner isn't exceptionally fast
+			sleep .1
+		done
+	done
+}
+export -f __spinner
+
+# Start the spinner on the first FLAC file being processed
+__start_spinner () {
+	if (( iteration == 1 )) ; then
+		# Display spinner as a separate process (forked to background)
+		__spinner &
+
+		# Store spinner PID into temporary file
+		printf "%s\n" "${!}" > "${tmp_spinner_pid}"
+	fi
+}
+export -f __start_spinner
+
+# Kill spinner process
+__kill_spinner () {
+	# Kill spinner process
+	#
+	# Obtain process PID of spinner
+	read spinner_pid < "${tmp_spinner_pid}"
+
+	# Kill spinner PID
+	kill "${spinner_pid}" 2>/dev/null
+
+	wait 2>/dev/null
+}
+export -f __kill_spinner
+
 # Determine number of jobs to run via the number
 # of CPUs/cores available
 __find_cores () {
@@ -2814,8 +2874,10 @@ __process_positional_parameters () {
 					# integer argument after '-j'
 					jobs="${OPTARG}"
 
+					# Do not allow jobs to be '0'
 					if (( jobs == 0 )) ; then
-						# Currently, this is just for '-j' so we can explicity specify it
+						# Currently, this is just for '-j' so we can explicity
+						# specify it
 						parameter_errors_array+=( "${cyan}-j${normal} requires a non-zero integer after it (eg. ${cyan}-j11${normal})." )
 					else
 						converted_arguments_array+=( -j )
@@ -2831,12 +2893,13 @@ __process_positional_parameters () {
 					converted_arguments_array+=( -o )
 				;;
 				:)
-					# Currently, this is just for '-j' so we can explicity specify it
+					# Currently, this is just for '-j' so we can explicity
+					# specify it
 					parameter_errors_array+=( "${cyan}-${OPTARG}${normal} requires a non-zero integer after it (eg. ${cyan}-${OPTARG}11${normal})." )
 				;;
 				?)
-					# Set invalid argument from getopts into
-					# array using ${OPTARG}
+					# Set invalid argument from getopts into array using
+					# ${OPTARG}
 					invalid_arguments_array+=( "-${OPTARG}" )
 				;;
 			esac
@@ -3345,7 +3408,7 @@ __operation_summary () {
 	# Begin printing the table
 
 	# Title
-	printf "\n${normal}%s${blue}%s${normal}\n" \
+	printf "  \n${normal}%s${blue}%s${normal}\n" \
 	" " "---------------------------------------------------"
 	printf "${normal}%s\n" \
 	"                Summary Of Operations"
@@ -3538,7 +3601,11 @@ __operation_summary () {
 	printf "${normal}%s${blue}%s${normal}\n" \
 	" " "-------------------------+-------------------------"
 
-	## CLEANUP SECTION ##
+	#---------------------------------------------------------------------------
+	# .: CLEANUP SECTION :.
+	#---------------------------------------------------------------------------
+	# Kill spinner
+	__kill_spinner
 
 	# Restore old stty settings, make stty happy
 	# by redirecting /dev/stderr
@@ -3549,6 +3616,9 @@ __operation_summary () {
 
 	# Remove the failed count file
 	rm -f "${tmp_fail_count}"
+
+	# Remove spinner PID file
+	rm -f "${tmp_spinner_pid}"
 
 	# Remove the temporary filename file
 	rm -f "${tmp_filename}"
@@ -3568,6 +3638,7 @@ __operation_summary () {
 
 	# Restore the cursor
 	printf "\033[?25h"
+	#== .: END CLEANUP SECTION :. ==============================================
 }
 #== .: END VARIOUS COMMANDS :. =================================================
 
@@ -3583,6 +3654,9 @@ __operation_test_replaygain () {
 
 		# Print current FLAC being processed
 		__print_test_replaygain
+
+		# Start spinner only if this is the first FLAC file being processed
+		__start_spinner
 
 		# Check if file is a FLAC file (capture output) via obtaining the sample
 		# rate of the current file.  The sample rate captured will be tested
@@ -3647,6 +3721,9 @@ __operation_replaygain_noforce () {
 
 		# Print current directory being processed
 		__print_add_replaygain
+
+		# Start spinner only if this is the first FLAC file being processed
+		__start_spinner
 
 		# ${i} is the parent directory to the FLAC files
 		# ${j} is a FLAC file -> under ${i}
@@ -3721,6 +3798,9 @@ __operation_replaygain_force () {
 		# Print current directory being processed
 		__print_add_replaygain
 
+		# Start spinner only if this is the first FLAC file being processed
+		__start_spinner
+
 		# Add ReplayGain to FLAC files under directory
 		metaflac --add-replay-gain "${i}"/*${flac_extension} >/dev/null 2>&1
 
@@ -3764,6 +3844,9 @@ __operation_compress () {
 		if (( COMPRESSION != compression_level )) ; then
 			# Print current FLAC being processed
 			__print_compressing_flac
+
+			# Start spinner only if this is the first FLAC file being processed
+			__start_spinner
 
 			# Compress FLAC file with user defined COMPRESSION
 			flac -f -${compression_level} -V --totally-silent "${i}"
@@ -3841,6 +3924,9 @@ __operation_test () {
 		# Print current FLAC being processed
 		__print_testing_flac
 
+		# Start spinner only if this is the first FLAC file being processed
+		__start_spinner
+
 		# Test FLAC file
 		flac -t --totally-silent "${i}"
 
@@ -3875,6 +3961,9 @@ __operation_aucdtect () {
 
 		# Print current FLAC being processed
 		__print_aucdtect_flac
+
+		# Start spinner only if this is the first FLAC file being processed
+		__start_spinner
 
 		# Get the bit depth of a FLAC file, also used to check
 		# if FLAC file is real.  Hide stderr output
@@ -4246,6 +4335,9 @@ __operation_md5_check () {
 		# Print current FLAC being processed
 		__print_checking_md5
 
+		# Start spinner only if this is the first FLAC file being processed
+		__start_spinner
+
 		# Get the MD5 checksum (hide stderr output).  Also
 		# used to check if FLAC file is real
 		md5_sum="$(metaflac --show-md5sum "${i}" 2> /dev/null)"
@@ -4305,6 +4397,9 @@ __operation_analyze_tags () {
 
 		# Print current FLAC being processed
 		__print_analyzing_tags
+
+		# Start spinner only if this is the first FLAC file being processed
+		__start_spinner
 
 		# Recreate the tags array so it can be parsed easily
 		eval "tags=(${exported_tags})"
@@ -4495,6 +4590,9 @@ __operation_analyze_tags_dont_log_coverart () {
 
 		# Print current FLAC being processed
 		__print_analyzing_tags
+
+		# Start spinner only if this is the first FLAC file being processed
+		__start_spinner
 
 		# Recreate the tags array so it can be parsed easily
 		eval "tags=(${exported_tags})"
@@ -4716,6 +4814,9 @@ __operation_set_tags () {
 		# Print current FLAC being processed
 		__print_applying_tags
 
+		# Start spinner only if this is the first FLAC file being processed
+		__start_spinner
+
 		# Recreate the tags array so it can be parsed easily
 		eval "tags=(${exported_tags})"
 
@@ -4831,6 +4932,9 @@ __operation_prune () {
 
 		# Print current FLAC being processed
 		__print_prune_flac
+
+		# Start spinner only if this is the first FLAC file being processed
+		__start_spinner
 
 		# Check if file is a FLAC file (hide output)
 		metaflac --show-md5sum "${i}" >/dev/null 2>&1
@@ -5079,6 +5183,9 @@ __check_config_version
 
 # Temporary FIFO location
 export tmp_fifo="/tmp/redoflacs_fifo_$$"
+
+# Temporary spinner PID
+export tmp_spinner_pid="/tmp/redoflacs_spinner_pid_$$"
 
 # Temporary count file
 export tmp_count_file="/tmp/redoflacs_count_iteration_$$"
