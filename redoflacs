@@ -1539,7 +1539,7 @@ __countdown_abort () {
 	# Restore the cursor
 	printf "\033[?25h"
 
-	exit 1
+	exit 130
 }
 
 # ReplayGain test abort
@@ -1564,7 +1564,7 @@ __replaygain_test_abort () {
 	testing_replaygain_complete="interrupt"
 	__operation_summary
 
-	exit 1
+	exit 130
 }
 
 # ReplayGain process abort
@@ -1589,7 +1589,7 @@ __replaygain_process_abort () {
 	adding_replaygain_complete="interrupt"
 	__operation_summary
 
-	exit 1
+	exit 130
 }
 
 # FLAC compress abort and remove temporarily encoded files (if any)
@@ -1618,7 +1618,7 @@ __compress_abort () {
 	compress_complete="interrupt"
 	__operation_summary
 
-	exit 1
+	exit 130
 }
 
 # FLAC test abort
@@ -1643,7 +1643,7 @@ __test_abort () {
 	test_complete="interrupt"
 	__operation_summary
 
-	exit 1
+	exit 130
 }
 
 # auCDtect abort.  Removes temporary WAV files (if any)
@@ -1679,7 +1679,7 @@ __aucdtect_abort () {
 	aucdtect_complete="interrupt"
 	__operation_summary
 
-	exit 1
+	exit 130
 }
 
 # MD5 check abort
@@ -3573,7 +3573,7 @@ __operation_test_replaygain () {
 		# Add one (iteration)
 		__iterate_count
 
-		# Prints current file and operation
+		# Print current FLAC being processed
 		__print_test_replaygain
 
 		# Check if file is a FLAC file (capture output) via obtaining the sample
@@ -3637,7 +3637,7 @@ __operation_replaygain_noforce () {
 		# Add one (iteration)
 		__iterate_count
 
-		# Prints current file and operation
+		# Print current directory being processed
 		__print_add_replaygain
 
 		# ${i} is the parent directory to the FLAC files
@@ -3665,14 +3665,14 @@ __operation_replaygain_noforce () {
 				# apply new ReplayGain values
 				#
 				# Add ReplayGain to FLAC files under directory.  Metaflac
-				# automatically removes old ReplayGain values (if any)
-				# before proceeding
+				# automatically removes old ReplayGain values (if any) before
+				# proceeding
 				metaflac --add-replay-gain "${i}"/*${flac_extension} >/dev/null 2>&1
 
 				# Exit code 130 is SIGINT so only check for exit code '1'
 				if (( ${?} == 1 )) ; then
 
-					# Print failed applying replaygain values to FLAC file diretory
+					# Print failed applying replaygain values to FLAC diretory
 					__print_failed_replaygain
 
 					# Log ReplayGain error
@@ -3710,10 +3710,10 @@ __operation_replaygain_force () {
 		# Add one (iteration)
 		__iterate_count
 
-		# Prints current file and operation
+		# Print current directory being processed
 		__print_add_replaygain
 
-		# Add ReplayGain to FLAC files under directory 
+		# Add ReplayGain to FLAC files under directory
 		metaflac --add-replay-gain "${i}"/*${flac_extension} >/dev/null 2>&1
 
 		# Exit code 130 is SIGINT so only check for exit code '1'
@@ -3754,6 +3754,7 @@ __operation_compress () {
 		COMPRESSION="${COMPRESSION#*=}"
 
 		if (( COMPRESSION != compression_level )) ; then
+			# Print current FLAC being processed
 			__print_compressing_flac
 
 			# Compress FLAC file with user defined COMPRESSION
@@ -3787,9 +3788,11 @@ __operation_compress () {
 		# If already at compression_level, test the FLAC file instead
 		# or skip the file if '-C, --compress-notest' was specified
 		else
+			# Print current FLAC has same compression
 			__print_level_same_compression
 
 			if [[ "${skip_test}" != "true" ]] ; then
+				# Print current FLAC being processed
 				__print_testing_flac
 
 				# Test FLAC file
@@ -3827,6 +3830,7 @@ __operation_test () {
 		# Add one (iteration)
 		__iterate_count
 
+		# Print current FLAC being processed
 		__print_testing_flac
 
 		# Test FLAC file
@@ -3861,6 +3865,7 @@ __operation_aucdtect () {
 		# Add one (iteration)
 		__iterate_count
 
+		# Print current FLAC being processed
 		__print_aucdtect_flac
 
 		# Get the bit depth of a FLAC file, also used to check
@@ -3923,9 +3928,9 @@ __operation_aucdtect () {
 			# Decompress FLAC to WAV so auCDtect can read the audio file
 			flac --totally-silent -d "${i}" -o "${decoded_wav}"
 
-			# Exit code 130 is SIGINT so only check for exit code '1'
-			# If FLAC file failed decoding to WAV, log error, otherwise
-			# continue processing
+			# Exit code 130 is SIGINT so only check for exit code '1'.  If FLAC
+			# file failed decoding to WAV, log error, otherwise continue
+			# processing
 			if (( ${?} == 1 )) ; then
 
 				# Print FLAC failed and log issue
@@ -4152,12 +4157,28 @@ __operation_aucdtect () {
 										spectrogram_picture="${spectrogram_location}/[${iteration}] ${flac_file%${flac_extension}}.png"
 										spectrogram_full="${spectrogram_location}/${spectrogram_picture}"
 
-										# Let's create the spectrogram for the failed FLAC
-										# file and output progress
+										# Let's create the spectrogram for the
+										# failed FLAC file and output progress
 										__print_aucdtect_spectrogram
 
-										# SoX command to create the spectrogram and place it in spectrogram_picture
-										"${sox_command}" "${decoded_wav_base}" -n spectrogram -c '' -t "${i}" -p1 -z90 -Z0 -q249 -wHann -x1800 -y513 -o "${spectrogram_picture}"
+										# SoX command to create the spectrogram
+										# and place it in spectrogram_picture.
+										# Use the following arguments to create
+										# highest resolution spectrograms:
+										#   -x 5000
+										#   -y 1025
+										"${sox_command}" "${decoded_wav_base}" \
+											-n spectrogram \
+											-c '' \
+											-t "${i}" \
+											-p 1 \
+											-z 90 \
+											-Z 0 \
+											-q 249 \
+											-w Hann \
+											-x 1800 \
+											-y 513 \
+											-o "${spectrogram_picture}"
 									fi
 
 									# Print ISSUE and log issue, and show where to find
@@ -4214,6 +4235,7 @@ __operation_md5_check () {
 		# Add one (iteration)
 		__iterate_count
 
+		# Print current FLAC being processed
 		__print_checking_md5
 
 		# Get the MD5 checksum (hide stderr output).  Also
@@ -4248,7 +4270,6 @@ __operation_md5_check () {
 			# File is not a FLAC file, display failed
 			__print_failed_flac
 
-
 			# Log FLAC failure
 			printf "\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n\n%s\n" \
 				   "            FLAC FILE  :  ${i##*/}" \
@@ -4274,6 +4295,7 @@ __operation_analyze_tags () {
 		# Add one (iteration)
 		__iterate_count
 
+		# Print current FLAC being processed
 		__print_analyzing_tags
 
 		# Recreate the tags array so it can be parsed easily
@@ -4463,6 +4485,7 @@ __operation_analyze_tags_dont_log_coverart () {
 		# Add one (iteration)
 		__iterate_count
 
+		# Print current FLAC being processed
 		__print_analyzing_tags
 
 		# Recreate the tags array so it can be parsed easily
@@ -4682,6 +4705,7 @@ __operation_set_tags () {
 		# Add one (iteration)
 		__iterate_count
 
+		# Print current FLAC being processed
 		__print_applying_tags
 
 		# Recreate the tags array so it can be parsed easily
@@ -4797,6 +4821,7 @@ __operation_prune () {
 		# Add one (iteration)
 		__iterate_count
 
+		# Print current FLAC being processed
 		__print_prune_flac
 
 		# Check if file is a FLAC file (hide output)
@@ -5098,10 +5123,11 @@ __processed_flacs_ok
 # FLAC files are corrupt or have metadata issues
 if [[ "${aucdtect_flac}" == "true" ]] ; then
 
-	__title_aucdtect_flac
-
 	# Trap SIGINT (Control-C) to abort cleanly
 	trap __aucdtect_abort SIGINT
+
+	# Prints title message of current operation
+	__title_aucdtect_flac
 
 	# Clear/initialize iteration
 	> "${tmp_count_file}"
@@ -5162,10 +5188,11 @@ fi
 # .: MD5 CHECK :.
 #-------------------------------------------------------------------------------
 if [[ "${md5check_flac}" == "true" ]] ; then
-	__title_md5check_flac
-
 	# Trap SIGINT (Control-C) to abort cleanly
 	trap __md5_check_abort SIGINT
+
+	# Prints title message of current operation
+	__title_md5check_flac
 
 	# Clear/initialize iteration
 	> "${tmp_count_file}"
@@ -5211,6 +5238,9 @@ fi
 #-------------------------------------------------------------------------------
 if [[ "${compress_flac}" == "true" ]] ; then
 
+	# Trap SIGINT (Control-C) to abort cleanly
+	trap __compress_abort SIGINT
+
 	# Set the correct title operation to print depending
 	# what was called
 	if [[ "${skip_test}" == "true" ]] ; then
@@ -5223,9 +5253,6 @@ if [[ "${compress_flac}" == "true" ]] ; then
 	# ${title_compress} is an alias to the command to
 	# run determined earlier
 	"${title_compress}"
-
-	# Trap SIGINT (Control-C) to abort cleanly
-	trap __compress_abort SIGINT
 
 	# Clear/initialize iteration
 	> "${tmp_count_file}"
@@ -5272,10 +5299,11 @@ fi
 # .: TEST :.
 #-------------------------------------------------------------------------------
 if [[ "${test_flac}" == "true" ]] ; then
-	__title_testing_flac
-
 	# Trap SIGINT (Control-C) to abort cleanly
 	trap __test_abort SIGINT
+
+	# Prints title message of current operation
+	__title_testing_flac
 
 	# Clear/initialize iteration
 	> "${tmp_count_file}"
@@ -5399,12 +5427,12 @@ if [[ "${replaygain_flac}" == "true" ]] ; then
 		directory="${PWD}"
 	fi
 
+	# Prints sub message of current operation
+	__sub_add_replaygain
+
 	# Grab number of directories to process provided as
 	# ${total_directories}
 	__total_directories
-
-	# Prints sub message of current operation
-	__sub_add_replaygain
 
 	# Unset any functions that were a result of previous operations
 	__tidy_env
@@ -5564,6 +5592,9 @@ if [[ "${retag_flac}" == "true" ]] ; then
 	# Trap SIGINT (Control-C) to abort cleanly
 	trap __applying_tags_abort SIGINT
 
+	# Prints sub message of current operation
+	__sub_applying_tags
+
 	# Clear/initialize iteration
 	> "${tmp_count_file}"
 
@@ -5575,9 +5606,6 @@ if [[ "${retag_flac}" == "true" ]] ; then
 	# Export the tag array using some trickery (BASH doesn't
 	# support exporting arrays natively)
 	export exported_tags="$(printf "%s\n" "${tags[@]}")"
-
-	# Prints sub message of current operation
-	__sub_applying_tags
 
 	# Unset any functions that were a result of previous operations
 	__tidy_env
@@ -5607,6 +5635,9 @@ fi
 #-------------------------------------------------------------------------------
 if [[ "${prune_flac}" == "true" ]] ; then
 
+	# Trap SIGINT (Control-C) to abort cleanly
+	trap __prune_abort SIGINT
+
 	# Don't remove artwork if user wants it kept.  We don't have to check
 	# for the legacy COVERART tag as we are NOT removing any VORBIS_COMMENTs.
 	if [[ "${remove_artwork}" == "true" ]] ; then
@@ -5617,10 +5648,8 @@ if [[ "${prune_flac}" == "true" ]] ; then
 		export dont_prune_flac_metadata="STREAMINFO,PICTURE,VORBIS_COMMENT"
 	fi
 
+	# Prints title message of current operation
 	__title_prune_flac
-
-	# Trap SIGINT (Control-C) to abort cleanly	
-	trap __prune_abort SIGINT
 
 	# Clear/initialize iteration
 	> "${tmp_count_file}"
