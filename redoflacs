@@ -2324,7 +2324,7 @@ export -f __kill_spinner
 __find_cores () {
 	# Check if /proc is mounted by comparing device numbers of
 	# /proc and / and see if they don't match (ie, /proc is mounted)
-	if (( $(stat -c %d%D /proc) == $(stat -c %d%D /) )) ; then
+	if (( $(stat -c %d /proc) == $(stat -c %d /) )) ; then
 		# /proc is not mounted, default to 2 jobs
 		jobs_display="(Default)"
 		jobs=2
@@ -3162,13 +3162,13 @@ __check_missing_programs () {
 			__warn "${cyan}wget${normal} ${cyan}--no-check-certificate${normal} ${cyan}-P${normal} ${cyan}/usr/local/bin/${normal} ${cyan}https://raw.github.com/sirjaren/redoflacs/binaries/auCDtect.exe${normal}\n" >&2
 			__warn "${cyan}chmod${normal} ${cyan}+x${normal} ${cyan}/usr/local/bin/auCDtect.exe${normal}\n\n" >&2
 
-			__warn "If you do _NOT_ have ${cyan}wget${normal} installed in your Cygwin" >&2
-			__warn "environment, you can either install it via ${cyan}setup.exe${normal}" >&2
-			__warn "(the Cygwin installer) and run the above commands or" >&2
-			__warn "you can download ${cyan}auCDtect${normal} using the link above and" >&2
-			__warn "move ${cyan}auCDtect${normal} to the correct location:" >&2
-			__warn "${cyan}mv${normal} ${cyan}/cygdrive/c/Users/Owner/Downloads/auCDtect.exe${normal} ${cyan}/usr/local/bin/${normal}" >&2
-			__warn "${cyan}chmod${normal} ${cyan}+x${normal} ${cyan}/usr/local/bin/auCDtect.exe${normal}" >&2
+			__warn "If you do _NOT_ have ${cyan}wget${normal} installed in your Cygwin\n" >&2
+			__warn "environment, you can either install it via ${cyan}setup.exe${normal}\n" >&2
+			__warn "(the Cygwin installer) and run the above commands or\n" >&2
+			__warn "you can download ${cyan}auCDtect${normal} using the link above and\n" >&2
+			__warn "move ${cyan}auCDtect${normal} to the correct location:\n" >&2
+			__warn "${cyan}mv${normal} ${cyan}/cygdrive/c/Users/Owner/Downloads/auCDtect.exe${normal} ${cyan}/usr/local/bin/${normal}\n" >&2
+			__warn "${cyan}chmod${normal} ${cyan}+x${normal} ${cyan}/usr/local/bin/auCDtect.exe${normal}\n" >&2
 
 			exit 1
 		else
@@ -3449,49 +3449,13 @@ __operation_summary () {
 		esac
 	}
 
-	#---------------------------------------------------------------------------
-	# .: CLEANUP SECTION :.
-	#---------------------------------------------------------------------------
-	# Kill spinner
-	__kill_spinner
-
-	# Restore old stty settings, make stty happy
-	# by redirecting /dev/stderr
-	stty ${old_stty} < /dev/stderr
-
-	# Remove temporary iteration file
-	rm -f "${tmp_count_file}"
-
-	# Remove the failed count file
-	rm -f "${tmp_fail_count}"
-
-	# Remove spinner PID file
-	rm -f "${tmp_spinner_pid}"
-
-	# Remove the temporary filename file
-	rm -f "${tmp_filename}"
-
-	# Explicitly stop auCDtect.exe (case-insensitive), allowing script to remove
-	# the temporary files.  This prevents the dreaded 'file or resource busy'
-	# message.  Send all output to /dev/null so nothing is shown.  Keep in mind
-	# 'taskkill' is a part of Windows via Cygwin and is invoked as such
-	taskkill /F /IM auCDtect.exe 1>/dev/null 2>&1
-
-	# Remove temporarily created WAV files (if any).
-	# Generally, any file removed at this point will be files
-	# that weren't able to be removed due to a file handle
-	# stealing resources
-	rm -f "${directory}"/**/*_redoflacs_[0-9]*.wav
-	rm -f "/tmp/"**/*_redoflacs_[0-9]*.wav
-
-	# Restore the cursor
-	printf "\033[?25h"
-	#== .: END CLEANUP SECTION :. ==============================================
-
 	# Begin printing the table
 
+	# Kill spinner before printing table
+	__kill_spinner
+
 	# Title
-	printf "\n${normal}%s${blue}%s${normal}\n" \
+	printf "  \n${normal}%s${blue}%s${normal}\n" \
 	" " "---------------------------------------------------"
 	printf "${normal}%s\n" \
 	"                Summary Of Operations"
@@ -3683,6 +3647,42 @@ __operation_summary () {
 
 	printf "${normal}%s${blue}%s${normal}\n" \
 	" " "-------------------------+-------------------------"
+
+	#---------------------------------------------------------------------------
+	# .: CLEANUP SECTION :.
+	#---------------------------------------------------------------------------
+	# Restore old stty settings, make stty happy
+	# by redirecting /dev/stderr
+	stty ${old_stty} < /dev/stderr
+
+	# Remove temporary iteration file
+	rm -f "${tmp_count_file}"
+
+	# Remove the failed count file
+	rm -f "${tmp_fail_count}"
+
+	# Remove spinner PID file
+	rm -f "${tmp_spinner_pid}"
+
+	# Remove the temporary filename file
+	rm -f "${tmp_filename}"
+
+	# Explicitly stop auCDtect.exe (case-insensitive), allowing script to remove
+	# the temporary files.  This prevents the dreaded 'file or resource busy'
+	# message.  Send all output to /dev/null so nothing is shown.  Keep in mind
+	# 'taskkill' is a part of Windows via Cygwin and is invoked as such
+	taskkill /F /IM auCDtect.exe 1>/dev/null 2>&1
+
+	# Remove temporarily created WAV files (if any).
+	# Generally, any file removed at this point will be files
+	# that weren't able to be removed due to a file handle
+	# stealing resources
+	rm -f "${directory}"/**/*_redoflacs_[0-9]*.wav
+	rm -f "/tmp/"**/*_redoflacs_[0-9]*.wav
+
+	# Restore the cursor
+	printf "\033[?25h"
+	#== .: END CLEANUP SECTION :. ==============================================
 }
 #== .: END VARIOUS COMMANDS :. =================================================
 
@@ -3885,12 +3885,12 @@ __operation_compress () {
 		COMPRESSION="$(metaflac --show-tag=COMPRESSION "${i}" 2> /dev/null)"
 		COMPRESSION="${COMPRESSION#*=}"
 
+		# Start spinner only if this is the first FLAC file being processed
+		__start_spinner
+
 		if (( COMPRESSION != compression_level )) ; then
 			# Print current FLAC being processed
 			__print_compressing_flac
-
-			# Start spinner only if this is the first FLAC file being processed
-			__start_spinner
 
 			# Compress FLAC file with user defined COMPRESSION
 			flac -f -${compression_level} -V --totally-silent "${i}"
@@ -5049,10 +5049,10 @@ export prune_flac=""
 # and if so, warn user and exit
 os_name="$(uname -o)"
 if [[ "${os_name}" != "Cygwin" ]] ; then
-	__error "This version of redoflacs is meant to be run under" >&2
-	__error "${cyan}Windows (Cygwin)${normal}.  Please use the ${cyan}UNIX/Linux/BSD${normal}" >&2
-	__error "version located here:" >&2
-	__error "${cyan}https://github.com/sirjaren/redoflacs/tags${normal}" >&2
+	__error "This version of redoflacs is meant to be run under\n" >&2
+	__error "${cyan}Windows (Cygwin)${normal}.  Please use the ${cyan}UNIX/Linux/BSD${normal}\n" >&2
+	__error "version located here:\n" >&2
+	__error "${cyan}https://github.com/sirjaren/redoflacs/tags${normal}\n" >&2
 
 	exit 1
 fi
@@ -5317,7 +5317,10 @@ if [[ "${aucdtect_flac}" == "true" ]] ; then
 		# Prepend log header to log file
 		__header_aucdtect
 
+		# Store operation status for Summary Of Operations
 		aucdtect_complete="false"
+
+		# Display Summary Of Operations
 		__operation_summary
 
 		exit 1
@@ -5338,7 +5341,12 @@ if [[ "${aucdtect_flac}" == "true" ]] ; then
 
 	# auCDtect completed successfully
 	__print_ok_flac ; __newline
+
+	# Store operation status for Summary Of Operations
 	aucdtect_complete="true"
+
+	# Kill spinner
+	__kill_spinner
 fi
 #== .: END AUCDTECT :. =========================================================
 
@@ -5379,7 +5387,10 @@ if [[ "${md5check_flac}" == "true" ]] ; then
 		# Prepend log header to log file
 		__header_md5_check
 
+		# Store operation status for Summary Of Operations
 		md5check_complete="false"
+
+		# Display Summary Of Operations
 		__operation_summary
 
 		exit 1
@@ -5387,7 +5398,12 @@ if [[ "${md5check_flac}" == "true" ]] ; then
 
 	# MD5 Check completed successfully
 	__print_ok_flac ; __newline
+
+	# Store operation status for Summary Of Operations
 	md5check_complete="true"
+
+	# Kill spinner
+	__kill_spinner
 fi
 #== .: END MD5 CHECK :. ========================================================
 
@@ -5441,7 +5457,10 @@ if [[ "${compress_flac}" == "true" ]] ; then
 		# Prepend log header to log file
 		__header_compress_verify
 
+		# Store operation status for Summary Of Operations
 		compress_complete="false"
+
+		# Display Summary Of Operations
 		__operation_summary
 
 		exit 1
@@ -5449,7 +5468,12 @@ if [[ "${compress_flac}" == "true" ]] ; then
 
 	# Compress FLACS completed successfully
 	__print_ok_flac ; __newline
+
+	# Store operation status for Summary Of Operations
 	compress_complete="true"
+
+	# Kill spinner
+	__kill_spinner
 fi
 #== .: END COMPRESS/VERIFY :. ==================================================
 
@@ -5490,7 +5514,10 @@ if [[ "${test_flac}" == "true" ]] ; then
 		# Prepend log header to log file
 		__header_test
 
+		# Store operation status for Summary Of Operations
 		test_complete="false"
+
+		# Display Summary Of Operations
 		__operation_summary
 
 		exit 1
@@ -5498,7 +5525,12 @@ if [[ "${test_flac}" == "true" ]] ; then
 
 	# Test FLACS completed successfully
 	__print_ok_flac ; __newline
+
+	# Store operation status for Summary Of Operations
 	test_complete="true"
+
+	# Kill spinner
+	__kill_spinner
 fi
 #== .: END TEST :. =============================================================
 
@@ -5523,7 +5555,6 @@ if [[ "${replaygain_flac}" == "true" ]] ; then
 	#   -----------^
 	# Test only the second integer in the version string above
 	__metaflac_version
-
 
 	#---------------------------------------------------------------------------
 	# .: TEST REPLAYGAIN :.
@@ -5560,7 +5591,10 @@ if [[ "${replaygain_flac}" == "true" ]] ; then
 		# Prepend log header to log file
 		__header_replaygain_test
 
+		# Store operation status for Summary Of Operations
 		testing_replaygain_complete="false"
+
+		# Display Summary Of Operations
 		__operation_summary
 
 		exit 1
@@ -5568,7 +5602,12 @@ if [[ "${replaygain_flac}" == "true" ]] ; then
 
 	# ReplayGain test completed successfully
 	__print_ok_replaygain_file
+
+	# Store operation status for Summary Of Operations
 	testing_replaygain_complete="true"
+
+	# Kill spinner
+	__kill_spinner
 	#== .: END TEST REPLAYGAIN :. ==============================================
 
 
@@ -5617,7 +5656,10 @@ if [[ "${replaygain_flac}" == "true" ]] ; then
 		# Prepend log header to log file
 		__header_replaygain_test
 
+		# Store operation status for Summary Of Operations
 		adding_replaygain_complete="false"
+
+		# Display Summary Of Operations
 		__operation_summary
 
 		exit 1
@@ -5625,7 +5667,12 @@ if [[ "${replaygain_flac}" == "true" ]] ; then
 
 	# ReplayGain processing completed successfully
 	__print_ok_replaygain_dir ; __newline
+
+	# Store operation status for Summary Of Operations
 	adding_replaygain_complete="true"
+
+	# Kill spinner
+	__kill_spinner
 	#== .: END PROCESS REPLAYGAIN :. ===========================================
 fi
 #== .: END REPLAYGAIN :. =======================================================
@@ -5720,7 +5767,10 @@ if [[ "${retag_flac}" == "true" ]] ; then
 		# Prepend log header to log file
 		__header_retag
 
+		# Store operation status for Summary Of Operations
 		analyzing_retag_complete="false"
+
+		# Display Summary Of Operations
 		__operation_summary
 
 		exit 1
@@ -5731,7 +5781,10 @@ if [[ "${retag_flac}" == "true" ]] ; then
 		# Prepend log header to log file
 		__header_retag
 
+		# Store operation status for Summary Of Operations
 		analyzing_retag_complete="false"
+
+		# Display Summary Of Operations
 		__operation_summary
 
 		exit 1
@@ -5739,7 +5792,12 @@ if [[ "${retag_flac}" == "true" ]] ; then
 
 	# Analyze Tags completed successfully
 	__print_ok_tag
+
+	# Store operation status for Summary Of Operations
 	analyzing_retag_complete="true"
+
+	# Kill spinner
+	__kill_spinner
 	#== .: END ANALYZE TAGS :. =================================================
 
 
@@ -5783,7 +5841,12 @@ if [[ "${retag_flac}" == "true" ]] ; then
 
 	# Applying Tags completed successfully
 	__print_ok_tag ; __newline
+
+	# Store operation status for Summary Of Operations
 	applying_retag_complete="true"
+
+	# Kill spinner
+	__kill_spinner
 	#== .: END SET TAGS :. =====================================================
 fi
 #== .: END RETAG :. ============================================================
@@ -5836,7 +5899,10 @@ if [[ "${prune_flac}" == "true" ]] ; then
 		# Prepend log header to log file
 		__header_prune
 
+		# Store operation status for Summary Of Operations
 		prune_complete="false"
+
+		# Display Summary Of Operations
 		__operation_summary
 
 		exit 1
@@ -5844,7 +5910,12 @@ if [[ "${prune_flac}" == "true" ]] ; then
 
 	# Prune FLACS completed successfully
 	__print_ok_flac ; __newline
+
+	# Store operation status for Summary Of Operations
 	prune_complete="true"
+
+	# Kill spinner
+	__kill_spinner
 fi
 #== .: END PRUNE :. ============================================================
 
@@ -5854,6 +5925,6 @@ if [[ "${coverart_warning}" == "true" ]] ; then
 	__coverart_warning
 fi
 
-# Display summary of completed tasks
+# Display Summary Of Operations
 __operation_summary
 #== .: END SCRIPT :. ===========================================================
